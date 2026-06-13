@@ -14,7 +14,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 
 不要把 API Key 写入仓库文件。
 
-所有 demo 都依赖真实 Anthropic 兼容 API；单元测试使用 mock/fake，不依赖网络和密钥。
+所有章节都直接启动 demo 连接真实 Anthropic 兼容 API 进行验证，不再编写单元测试。不要把 API Key 写入仓库文件。
 
 ## 学习路线
 
@@ -49,7 +49,7 @@ git switch s01-agent-loop
 先编译并生成依赖 classpath：
 
 ```sh
-mvn test
+mvn package -DskipTests
 mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 ```
 
