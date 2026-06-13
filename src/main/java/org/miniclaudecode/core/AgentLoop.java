@@ -1,5 +1,9 @@
 package org.miniclaudecode.core;
 
+import org.miniclaudecode.hook.HookContext;
+import org.miniclaudecode.hook.HookDecision;
+import org.miniclaudecode.hook.HookEvent;
+import org.miniclaudecode.hook.HookManager;
 import org.miniclaudecode.llm.LlmClient;
 import org.miniclaudecode.permission.PermissionDecision;
 import org.miniclaudecode.permission.PermissionManager;
@@ -21,6 +25,8 @@ public class AgentLoop {
 
 	private final PermissionManager permissionManager;
 
+	private final HookManager hookManager;
+
 	public AgentLoop(LlmClient llmClient, List<Tool> tools) {
 		this(llmClient, tools, new AgentLoopListener() {
 		}, null);
@@ -35,6 +41,7 @@ public class AgentLoop {
 		this.llmClient = llmClient;
 		this.listener = listener;
 		this.permissionManager = permissionManager;
+		this.hookManager = null;
 		this.toolRegistry = new ToolRegistry();
 		for (Tool tool : tools) {
 			this.toolRegistry.register(tool);
@@ -43,11 +50,11 @@ public class AgentLoop {
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry) {
 		this(llmClient, toolRegistry, new AgentLoopListener() {
-		}, null);
+		}, (PermissionManager) null);
 	}
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener) {
-		this(llmClient, toolRegistry, listener, null);
+		this(llmClient, toolRegistry, listener, (PermissionManager) null);
 	}
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener,
@@ -56,6 +63,16 @@ public class AgentLoop {
 		this.toolRegistry = toolRegistry;
 		this.listener = listener;
 		this.permissionManager = permissionManager;
+		this.hookManager = null;
+	}
+
+	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener,
+			HookManager hookManager) {
+		this.llmClient = llmClient;
+		this.toolRegistry = toolRegistry;
+		this.listener = listener;
+		this.permissionManager = null;
+		this.hookManager = hookManager;
 	}
 
 	public AssistantMessage run(String prompt) {
@@ -72,6 +89,7 @@ public class AgentLoop {
 
 			List<ToolResultBlock> toolResults = executeToolUses(response);
 			if (!"tool_use".equals(response.getStopReason()) || toolResults.isEmpty()) {
+				triggerStopHooks(messages);
 				listener.onStop(response);
 				return response;
 			}
@@ -97,8 +115,14 @@ public class AgentLoop {
 					results.add(new ToolResultBlock(toolUse.getId(), decision.getMessage()));
 					continue;
 				}
+				HookDecision hookDecision = triggerPreToolUseHooks(toolUse);
+				if (hookDecision.isBlocked()) {
+					results.add(new ToolResultBlock(toolUse.getId(), hookDecision.getMessage()));
+					continue;
+				}
 				ToolResult result = executeTool(toolUse);
 				listener.afterToolUse(toolUse, result);
+				triggerPostToolUseHooks(toolUse, result);
 				results.add(new ToolResultBlock(toolUse.getId(), result.getContent()));
 			}
 		}
@@ -118,5 +142,33 @@ public class AgentLoop {
 			return PermissionDecision.allow();
 		}
 		return permissionManager.check(toolUse);
+	}
+
+	private HookDecision triggerPreToolUseHooks(ToolUseBlock toolUse) {
+		if (hookManager == null) {
+			return HookDecision.pass();
+		}
+		HookContext context = new HookContext(HookEvent.PRE_TOOL_USE);
+		context.setToolUse(toolUse);
+		return hookManager.trigger(HookEvent.PRE_TOOL_USE, context);
+	}
+
+	private void triggerPostToolUseHooks(ToolUseBlock toolUse, ToolResult result) {
+		if (hookManager == null) {
+			return;
+		}
+		HookContext context = new HookContext(HookEvent.POST_TOOL_USE);
+		context.setToolUse(toolUse);
+		context.setToolResult(result);
+		hookManager.trigger(HookEvent.POST_TOOL_USE, context);
+	}
+
+	private void triggerStopHooks(List<Message> messages) {
+		if (hookManager == null) {
+			return;
+		}
+		HookContext context = new HookContext(HookEvent.STOP);
+		context.setMessages(messages);
+		hookManager.trigger(HookEvent.STOP, context);
 	}
 }

@@ -253,3 +253,66 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 - prompt：`请调用 bash 工具执行：chmod 777 target/s02-demo.txt。出现 Allow? 时等待我的输入。`
 - 输入确认：输入 `n`
 - 预期观察：控制台出现 `Permission> Potentially destructive command` 和 `Allow? [y/N]`，拒绝后工具不会执行，模型收到 `Permission denied by user...`。
+
+## s04：挂在循环上，不写进循环里
+
+**教学分支：** `s04-hooks`
+
+s04 解决的问题是：权限、日志、输出检查、停止统计这些能力都和工具调用相关，但不应该全部写进 `AgentLoop`。
+
+本章新增：
+
+- `HookEvent`：定义四个事件点：`USER_PROMPT_SUBMIT`、`PRE_TOOL_USE`、`POST_TOOL_USE`、`STOP`。
+- `HookContext`：在事件触发时携带 prompt、tool_use、tool_result、messages 等上下文。
+- `HookDecision`：Hook 可以选择放行，也可以阻止本次工具调用。
+- `HookManager`：按事件注册多个 hook，并按顺序触发。
+- `S04HooksDemo`：演示把权限、日志、输出检查和停止统计都挂到 hook 上。
+
+### 核心变化
+
+主循环没有写死“权限规则”或“日志格式”，只在固定位置触发 hook：
+
+```text
+用户输入 -> UserPromptSubmit
+工具执行前 -> PreToolUse
+工具执行后 -> PostToolUse
+循环停止时 -> Stop
+```
+
+`PreToolUse` 的返回值会影响工具是否执行：
+
+- `HookDecision.pass()`：继续执行工具。
+- `HookDecision.block(message)`：跳过工具，把 `message` 作为 `tool_result` 回传给模型。
+
+这样权限系统可以从 s03 的主流程判断，迁移成 s04 的一个 hook。以后要加审计日志、敏感信息扫描、输出截断提醒，也只需要注册新的 hook，不需要继续改主循环。
+
+### 本章保留的最小 Hook
+
+`S04HooksDemo` 注册了四类 hook：
+
+- `UserPromptSubmit`：打印当前工作目录。
+- `PreToolUse`：一个权限 hook 加一个工具调用日志 hook。
+- `PostToolUse`：当工具输出超过阈值时提醒。
+- `Stop`：统计本轮对话用了多少次工具。
+
+这些 hook 故意写在 demo 中，便于读者直接看到“扩展点怎么挂上去”。真正项目里可以把它们拆到独立类。
+
+### 验证
+
+编译命令：
+
+```sh
+mvn package -DskipTests
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+```
+
+启动 demo：
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s04.S04HooksDemo
+```
+
+真实 API smoke test：
+
+- prompt：`请调用 bash 工具执行：printf s04-hook-ok。然后只回答工具输出。`
+- 预期观察：控制台出现 `[HOOK] UserPromptSubmit`、`[HOOK] PreToolUse: bash ...`、工具输出 `s04-hook-ok`、以及 `[HOOK] Stop: session used 1 tool calls`。
