@@ -93,6 +93,20 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 请调用 bash 工具执行：chmod 777 target/s02-demo.txt。出现 Allow? 时等待我的输入。
 ```
 
+## 运行 s04
+
+s04 把权限、日志、输出检查、停止统计挂到 Hook 上，主循环只负责触发事件。
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s04.S04HooksDemo
+```
+
+可以试这个输入，观察是否出现 `[HOOK] UserPromptSubmit`、`[HOOK] PreToolUse`、`[HOOK] Stop`：
+
+```text
+请调用 bash 工具执行：printf s04-hook-ok。然后只回答工具输出。
+```
+
 ## 参考项目
 
 本项目参考 [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)。
@@ -103,4 +117,4 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 2. 再切换到 `mini-claude-code` 对应分支，阅读 Java 最小实现。
 3. 最后对照本项目 `changelog.md`，查看本章保留了哪些核心代码、删掉了哪些无关机制。
 
-`learn-claude-code` 更适合理解完整机制和 Python 教学实现；`mini-claude-code` 更适合用 Java 阅读最小源码、运行测试和观察分支快照。
+`learn-claude-code` 更适合理解完整机制和 Python 教学实现；`mini-claude-code` 更适合用 Java 阅读最小源码、运行 demo 和观察分支快照。
