@@ -25,6 +25,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s03 Permission
 - s04 Hooks
 - s05 Todo
+- s06 Subagent
 
 ## 分支学习
 
@@ -35,6 +36,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s03-permission`
 - `s04-hooks`
 - `s05-todo`
+- `s06-subagent`
 
 切换示例：
 
@@ -119,6 +121,20 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 ```text
 请务必先调用 todo_write 工具，写入两个任务：检查 s05 demo 为 in_progress，总结结果为 pending。然后只回答 todo_write 的工具结果。
+```
+
+## 运行 s06
+
+s06 加入 `task` 工具，让父 Agent 把复杂子任务交给一个干净上下文的子 Agent。子 Agent 不注册 `task`，只返回最终摘要。
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s06.S06SubagentDemo
+```
+
+可以试这个输入，观察是否出现 `Tool> task` 和 `[Subagent spawned]`：
+
+```text
+请调用 task 工具，description 参数必须完整写成：请调用 bash 工具执行命令 printf s06-subagent-ok，然后返回这个命令的输出。父 Agent 最后只回答子 Agent 摘要。
 ```
 
 ## 参考项目
