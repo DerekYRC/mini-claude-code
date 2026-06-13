@@ -67,16 +67,16 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 ## 运行 s02
 
-s02 在 s01 基础上加入 `ToolRegistry` 和 `read_file` 工具。
+s02 在 s01 基础上加入 `ToolRegistry`，并注册 `bash/read_file/write_file/edit_file/glob` 五个工具。
 
 ```sh
 java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s02.S02ToolDispatchDemo
 ```
 
-可以试这个输入，观察是否出现 `Tool> read_file`：
+可以试这个输入，观察是否出现 `Tool> write_file`、`Tool> edit_file`、`Tool> read_file` 和 `Tool> glob`：
 
 ```text
-请调用 read_file 工具读取 README.md 的前 3 行，然后回答你读到的内容。
+请依次使用 write_file、edit_file、read_file、glob 工具：先写入 target/s02-demo.txt，内容为 old hello；再把 old 替换为 new；然后读取文件内容；最后用 glob 查找 target/s02-*.txt，并回答最终文件内容和匹配结果。
 ```
 
 ## 参考项目

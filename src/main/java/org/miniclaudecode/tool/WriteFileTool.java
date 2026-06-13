@@ -7,17 +7,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
 
-public class ReadFileTool implements Tool {
-
-	private final File workdir;
+public class WriteFileTool implements Tool {
 
 	private final PathGuard pathGuard;
 
-	public ReadFileTool(File workdir) {
-		this.workdir = workdir;
+	public WriteFileTool(File workdir) {
 		this.pathGuard = new PathGuard(workdir);
 	}
 
@@ -27,33 +22,35 @@ public class ReadFileTool implements Tool {
 				.fluentPut("path", new JSONObject()
 						.fluentPut("type", "string")
 						.fluentPut("description", "File path relative to the workdir"))
-				.fluentPut("limit", new JSONObject()
-						.fluentPut("type", "integer")
-						.fluentPut("description", "Optional max number of lines to return"));
+				.fluentPut("content", new JSONObject()
+						.fluentPut("type", "string")
+						.fluentPut("description", "Content to write"));
 		JSONObject schema = new JSONObject()
 				.fluentPut("type", "object")
 				.fluentPut("properties", properties)
-				.fluentPut("required", new JSONArray().fluentAdd("path"));
-		return new ToolDefinition("read_file", "Read a UTF-8 text file from the workdir", schema);
+				.fluentPut("required", new JSONArray().fluentAdd("path").fluentAdd("content"));
+		return new ToolDefinition("write_file", "Write content to a UTF-8 file in the workdir", schema);
 	}
 
 	@Override
 	public ToolResult execute(JSONObject input) {
 		String path = input == null ? "" : input.getString("path");
+		String content = input == null ? null : input.getString("content");
 		if (path == null || path.isBlank()) {
 			return new ToolResult("Error: No path provided");
+		}
+		if (content == null) {
+			return new ToolResult("Error: No content provided");
 		}
 
 		try {
 			File target = pathGuard.resolve(path);
-			Integer limit = input.getInteger("limit");
-			List<String> lines = Files.readAllLines(target.toPath(), StandardCharsets.UTF_8);
-			if (limit != null && limit > 0 && limit < lines.size()) {
-				List<String> limited = new ArrayList<>(lines.subList(0, limit));
-				limited.add("... (" + (lines.size() - limit) + " more lines)");
-				lines = limited;
+			File parent = target.getParentFile();
+			if (parent != null) {
+				Files.createDirectories(parent.toPath());
 			}
-			return new ToolResult(String.join("\n", lines));
+			Files.writeString(target.toPath(), content, StandardCharsets.UTF_8);
+			return new ToolResult("Wrote " + content.getBytes(StandardCharsets.UTF_8).length + " bytes to " + path);
 		}
 		catch (IOException e) {
 			return new ToolResult("Error: " + e.getMessage());
