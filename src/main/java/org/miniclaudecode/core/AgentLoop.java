@@ -3,18 +3,17 @@ package org.miniclaudecode.core;
 import org.miniclaudecode.llm.LlmClient;
 import org.miniclaudecode.tool.Tool;
 import org.miniclaudecode.tool.ToolDefinition;
+import org.miniclaudecode.tool.ToolRegistry;
 import org.miniclaudecode.tool.ToolResult;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class AgentLoop {
 
 	private final LlmClient llmClient;
 
-	private final Map<String, Tool> tools = new LinkedHashMap<>();
+	private final ToolRegistry toolRegistry;
 
 	private final AgentLoopListener listener;
 
@@ -26,9 +25,21 @@ public class AgentLoop {
 	public AgentLoop(LlmClient llmClient, List<Tool> tools, AgentLoopListener listener) {
 		this.llmClient = llmClient;
 		this.listener = listener;
+		this.toolRegistry = new ToolRegistry();
 		for (Tool tool : tools) {
-			this.tools.put(tool.getDefinition().getName(), tool);
+			this.toolRegistry.register(tool);
 		}
+	}
+
+	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry) {
+		this(llmClient, toolRegistry, new AgentLoopListener() {
+		});
+	}
+
+	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener) {
+		this.llmClient = llmClient;
+		this.toolRegistry = toolRegistry;
+		this.listener = listener;
 	}
 
 	public AssistantMessage run(String prompt) {
@@ -56,11 +67,7 @@ public class AgentLoop {
 	}
 
 	private List<ToolDefinition> toolDefinitions() {
-		List<ToolDefinition> definitions = new ArrayList<>();
-		for (Tool tool : tools.values()) {
-			definitions.add(tool.getDefinition());
-		}
-		return definitions;
+		return toolRegistry.definitions();
 	}
 
 	private List<ToolResultBlock> executeToolUses(AssistantMessage response) {
@@ -78,7 +85,7 @@ public class AgentLoop {
 	}
 
 	private ToolResult executeTool(ToolUseBlock toolUse) {
-		Tool tool = tools.get(toolUse.getName());
+		Tool tool = toolRegistry.find(toolUse.getName());
 		if (tool == null) {
 			return new ToolResult("Unknown tool: " + toolUse.getName());
 		}

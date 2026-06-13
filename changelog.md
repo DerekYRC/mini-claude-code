@@ -49,7 +49,6 @@
 Java 版没有使用 Anthropic Python SDK，而是用 Hutool 手写 HTTP，因此显式设置 Anthropic Messages API 所需请求头：
 
 - `x-api-key`
-- `anthropic-version`
 - `content-type`
 
 请求中的工具定义会被序列化成：
@@ -102,3 +101,72 @@ mvn package -DskipTests
 - 模型调用 `bash` 创建文件，例如写入 `print("hello world")`。
 - 控制台出现 `Tool> bash ...` 和 `ToolResult> exit_code=0`。
 - 运行 `python3 hello.py` 时输出 `hello world`。
+
+## s02：加一个工具，只加一个 handler
+
+**教学分支：** `s02-tool-dispatch`
+
+s02 只解决一个问题：工具越来越多时，主循环不能因为“新增工具”继续变胖。
+
+本章新增：
+
+- `ToolRegistry`：一个最小 dispatch map，负责 `register(tool)`、`find(name)` 和导出 `definitions()`。
+- `ReadFileTool`：一个新的工具 handler，工具名是 `read_file`。
+- `S02ToolDispatchDemo`：注册 `bash + read_file`，外层仍然循环读输入。
+
+### 核心变化
+
+s01 的循环结构不变：
+
+```text
+LLM -> tool_use -> execute tool -> tool_result -> LLM
+```
+
+s02 只把“按工具名找执行器”从循环里抽到 `ToolRegistry`：
+
+```text
+ToolRegistry
+  bash      -> BashTool
+  read_file -> ReadFileTool
+```
+
+所以新增工具时，只需要：
+
+1. 写一个实现 `Tool` 的类。
+2. 在 demo 里 `registry.register(new XxxTool(...))`。
+
+### read_file 工具
+
+`ReadFileTool` 输入：
+
+```json
+{"path":"README.md","limit":3}
+```
+
+行为：
+
+- 读取工作目录下的 UTF-8 文本文件。
+- `limit` 可选，用来限制返回行数。
+- 路径必须留在 workdir 内，避免读取工作目录之外的文件。
+
+权限系统仍然不在 s02 实现；“能不能做、要不要问用户”会放到 s03。
+
+### 验证
+
+编译命令：
+
+```sh
+mvn package -DskipTests
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+```
+
+启动 demo：
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s02.S02ToolDispatchDemo
+```
+
+真实 API smoke test：
+
+- prompt：`请调用 read_file 工具读取 README.md 的前 3 行，然后回答你读到的内容。`
+- 预期观察：控制台出现 `Tool> read_file ...`，并且最终回答来自 `README.md` 的内容。

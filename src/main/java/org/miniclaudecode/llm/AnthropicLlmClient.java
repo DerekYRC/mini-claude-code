@@ -46,7 +46,6 @@ public class AnthropicLlmClient implements LlmClient {
 	public Map<String, String> requestHeaders() {
 		Map<String, String> headers = new LinkedHashMap<>();
 		headers.put("x-api-key", config.getApiKey());
-		headers.put("anthropic-version", "2023-06-01");
 		headers.put("content-type", "application/json");
 		return headers;
 	}
