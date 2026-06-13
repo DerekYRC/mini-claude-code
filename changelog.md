@@ -205,3 +205,51 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 - prompt：`请依次使用 write_file、edit_file、read_file、glob 工具：先写入 target/s02-demo.txt，内容为 old hello；再把 old 替换为 new；然后读取文件内容；最后用 glob 查找 target/s02-*.txt，并回答最终文件内容和匹配结果。`
 - 预期观察：控制台出现 `Tool> write_file ...`、`Tool> edit_file ...`、`Tool> read_file ...`、`Tool> glob ...`，最终回答包含 `new hello` 和 `target/s02-demo.txt`。
+
+## s03：先划边界，再给自由
+
+**教学分支：** `s03-permission`
+
+s03 在 s02 的工具执行前加入权限判断。循环的核心仍然是：
+
+```text
+LLM -> tool_use -> permission -> execute tool -> tool_result -> LLM
+```
+
+本章新增：
+
+- `PermissionManager`：权限管线入口。
+- `PermissionDecision`：表达允许或拒绝。
+- `ApprovalPrompter` / `ConsoleApprovalPrompter`：当规则需要用户确认时暂停询问。
+- `S03PermissionDemo`：注册 s02 的五个工具，并把权限管线挂到 `AgentLoop`。
+
+### 三道门
+
+参考项目 s03 把工具执行前的权限分为三层：
+
+1. 硬阻止列表：例如 `rm -rf /`、`sudo`、`shutdown`、`mkfs`、`dd if=`，永远拒绝。
+2. 规则匹配：例如 `rm `、`> /etc/`、`chmod 777`，属于潜在破坏操作。
+3. 用户确认：命中规则后打印 `Permission>` 和工具参数，等待用户输入 `y/yes`。
+
+文件写入类工具仍限制在 workdir 内；路径越界直接拒绝。
+
+### 验证
+
+编译命令：
+
+```sh
+mvn package -DskipTests
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+```
+
+启动 demo：
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s03.S03PermissionDemo
+```
+
+真实 API smoke test：
+
+- prompt：`请调用 bash 工具执行：chmod 777 target/s02-demo.txt。出现 Allow? 时等待我的输入。`
+- 输入确认：输入 `n`
+- 预期观察：控制台出现 `Permission> Potentially destructive command` 和 `Allow? [y/N]`，拒绝后工具不会执行，模型收到 `Permission denied by user...`。
