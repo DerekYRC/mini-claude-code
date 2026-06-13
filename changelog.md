@@ -4,13 +4,14 @@
 
 ## 阶段一：基础 Agent Harness
 
-阶段一包含 s01-s05：
+阶段一包含 s01-s06：
 
 - s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
 - s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
 - s03 Permission：先划边界，再给自由，分支 `s03-permission`
 - s04 Hooks：挂在循环上，不写进循环里，分支 `s04-hooks`
 - s05 Todo：没有计划的 agent 走哪算哪，分支 `s05-todo`
+- s06 Subagent：大任务拆小，每个小任务干净的上下文，分支 `s06-subagent`
 
 ## s01：One loop & Bash is all you need
 
@@ -385,3 +386,51 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 - prompt：`请务必先调用 todo_write 工具，写入两个任务：检查 s05 demo 为 in_progress，总结结果为 pending。然后只回答 todo_write 的工具结果。`
 - 预期观察：控制台先出现 `Tool> todo_write ...`，工具结果包含 `Updated 2 tasks`、`[in_progress] 检查 s05 demo` 和 `[pending] 总结结果`。
+
+## s06：大任务拆小，每个小任务干净的上下文
+
+**教学分支：** `s06-subagent`
+
+s06 解决的问题是：父 Agent 的上下文已经很长时，复杂子任务继续塞在同一个 `messages` 里会越来越乱。最小解法是把“委托子任务”做成一个工具，让子 Agent 用全新的上下文独立完成任务，只把最终摘要带回父 Agent。
+
+本章新增：
+
+- `AgentLoop` 的 `maxTurns`：默认仍是 20，子 Agent 可以单独设置为 30。
+- `TaskTool`：工具名 `task`，输入是 `description`，内部启动一个子 Agent。
+- `S06SubagentDemo`：父工具池包含 `task`，子工具池只包含 `bash/read_file/write_file/edit_file/glob`。
+
+### 核心变化
+
+父 Agent 调用 `task` 后，子 Agent 重新开始一份干净消息列表：
+
+```text
+Parent messages[] -> task(description)
+                  -> Subagent messages[] = [description]
+                  -> Subagent tools: bash/read_file/write_file/edit_file/glob
+                  -> summary text
+                  -> Parent tool_result
+```
+
+关键边界是：子 Agent 不注册 `task` 工具，所以不能继续递归创建子 Agent。子 Agent 的中间工具调用和历史消息也不会带回父 Agent，父 Agent 只收到最终摘要。
+
+本章故意不带 s05 todo 和 s04 hook，只保留理解“干净上下文子 Agent”所需的最小代码。
+
+### 验证
+
+编译命令：
+
+```sh
+mvn package -DskipTests
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+```
+
+启动 demo：
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s06.S06SubagentDemo
+```
+
+真实 API smoke test：
+
+- prompt：`请调用 task 工具，description 参数必须完整写成：请调用 bash 工具执行命令 printf s06-subagent-ok，然后返回这个命令的输出。父 Agent 最后只回答子 Agent 摘要。`
+- 预期观察：控制台出现 `Tool> task ...`、`[Subagent spawned]`、`[sub] Tool> bash ...` 和 `s06-subagent-ok`。

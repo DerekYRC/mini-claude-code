@@ -17,6 +17,8 @@ import java.util.List;
 
 public class AgentLoop {
 
+	private static final int DEFAULT_MAX_TURNS = 20;
+
 	private final LlmClient llmClient;
 
 	private final ToolRegistry toolRegistry;
@@ -26,6 +28,8 @@ public class AgentLoop {
 	private final PermissionManager permissionManager;
 
 	private final HookManager hookManager;
+
+	private final int maxTurns;
 
 	public AgentLoop(LlmClient llmClient, List<Tool> tools) {
 		this(llmClient, tools, new AgentLoopListener() {
@@ -38,14 +42,7 @@ public class AgentLoop {
 
 	public AgentLoop(LlmClient llmClient, List<Tool> tools, AgentLoopListener listener,
 			PermissionManager permissionManager) {
-		this.llmClient = llmClient;
-		this.listener = listener;
-		this.permissionManager = permissionManager;
-		this.hookManager = null;
-		this.toolRegistry = new ToolRegistry();
-		for (Tool tool : tools) {
-			this.toolRegistry.register(tool);
-		}
+		this(llmClient, toRegistry(tools), listener, permissionManager, null, DEFAULT_MAX_TURNS);
 	}
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry) {
@@ -59,20 +56,27 @@ public class AgentLoop {
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener,
 			PermissionManager permissionManager) {
-		this.llmClient = llmClient;
-		this.toolRegistry = toolRegistry;
-		this.listener = listener;
-		this.permissionManager = permissionManager;
-		this.hookManager = null;
+		this(llmClient, toolRegistry, listener, permissionManager, null, DEFAULT_MAX_TURNS);
 	}
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener,
 			HookManager hookManager) {
+		this(llmClient, toolRegistry, listener, null, hookManager, DEFAULT_MAX_TURNS);
+	}
+
+	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener,
+			int maxTurns) {
+		this(llmClient, toolRegistry, listener, null, null, maxTurns);
+	}
+
+	private AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener,
+			PermissionManager permissionManager, HookManager hookManager, int maxTurns) {
 		this.llmClient = llmClient;
 		this.toolRegistry = toolRegistry;
 		this.listener = listener;
-		this.permissionManager = null;
+		this.permissionManager = permissionManager;
 		this.hookManager = hookManager;
+		this.maxTurns = maxTurns;
 	}
 
 	public AssistantMessage run(String prompt) {
@@ -82,7 +86,7 @@ public class AgentLoop {
 	}
 
 	public AssistantMessage run(List<Message> messages) {
-		for (int turn = 0; turn < 20; turn++) {
+		for (int turn = 0; turn < maxTurns; turn++) {
 			AssistantMessage response = llmClient.chat(messages, toolDefinitions());
 			listener.onAssistantMessage(response);
 			messages.add(Message.assistant(response.getContent()));
@@ -97,7 +101,15 @@ public class AgentLoop {
 			messages.add(Message.toolResults(toolResults));
 		}
 
-		throw new IllegalStateException("Agent loop reached max turns");
+		throw new IllegalStateException("Agent loop reached max turns: " + maxTurns);
+	}
+
+	private static ToolRegistry toRegistry(List<Tool> tools) {
+		ToolRegistry registry = new ToolRegistry();
+		for (Tool tool : tools) {
+			registry.register(tool);
+		}
+		return registry;
 	}
 
 	private List<ToolDefinition> toolDefinitions() {
