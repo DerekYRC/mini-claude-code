@@ -10,9 +10,12 @@ import org.miniclaudecode.core.ToolUseBlock;
 import org.miniclaudecode.llm.AnthropicConfig;
 import org.miniclaudecode.llm.AnthropicLlmClient;
 import org.miniclaudecode.tool.BashTool;
+import org.miniclaudecode.tool.EditFileTool;
+import org.miniclaudecode.tool.GlobTool;
 import org.miniclaudecode.tool.ReadFileTool;
 import org.miniclaudecode.tool.ToolRegistry;
 import org.miniclaudecode.tool.ToolResult;
+import org.miniclaudecode.tool.WriteFileTool;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -32,7 +35,10 @@ public class S02ToolDispatchDemo {
 		File workdir = new File(".");
 		ToolRegistry registry = new ToolRegistry()
 				.register(new BashTool(workdir))
-				.register(new ReadFileTool(workdir));
+				.register(new ReadFileTool(workdir))
+				.register(new WriteFileTool(workdir))
+				.register(new EditFileTool(workdir))
+				.register(new GlobTool(workdir));
 		AgentLoop loop = new AgentLoop(new AnthropicLlmClient(config), registry, new AgentLoopListener() {
 			@Override
 			public void beforeToolUse(ToolUseBlock toolUse) {
