@@ -26,6 +26,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s04 Hooks
 - s05 Todo
 - s06 Subagent
+- s07 Skill Loading
 
 ## 分支学习
 
@@ -37,6 +38,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s04-hooks`
 - `s05-todo`
 - `s06-subagent`
+- `s07-skill-loading`
 
 切换示例：
 
@@ -135,6 +137,20 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 ```text
 请调用 task 工具，description 参数必须完整写成：请调用 bash 工具执行命令 printf s06-subagent-ok，然后返回这个命令的输出。父 Agent 最后只回答子 Agent 摘要。
+```
+
+## 运行 s07
+
+s07 启动时扫描 `skills/*/SKILL.md`，只把技能名和一句描述放进 system prompt。模型需要细节时调用 `load_skill`，通过 tool_result 注入 `<skill name="...">正文</skill>`。
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s07.S07SkillLoadingDemo
+```
+
+可以试这个输入，观察是否出现 `Tool> load_skill`：
+
+```text
+请调用 load_skill 加载 code-review 技能，然后只回答这个技能的 name 和第一句说明。
 ```
 
 ## 参考项目

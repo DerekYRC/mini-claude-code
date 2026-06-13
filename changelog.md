@@ -4,7 +4,7 @@
 
 ## 阶段一：基础 Agent Harness
 
-阶段一包含 s01-s06：
+阶段一包含 s01-s07：
 
 - s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
 - s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
@@ -12,6 +12,7 @@
 - s04 Hooks：挂在循环上，不写进循环里，分支 `s04-hooks`
 - s05 Todo：没有计划的 agent 走哪算哪，分支 `s05-todo`
 - s06 Subagent：大任务拆小，每个小任务干净的上下文，分支 `s06-subagent`
+- s07 Skill Loading：用到时再加载，别全塞 prompt 里，分支 `s07-skill-loading`
 
 ## s01：One loop & Bash is all you need
 
@@ -434,3 +435,50 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 - prompt：`请调用 task 工具，description 参数必须完整写成：请调用 bash 工具执行命令 printf s06-subagent-ok，然后返回这个命令的输出。父 Agent 最后只回答子 Agent 摘要。`
 - 预期观察：控制台出现 `Tool> task ...`、`[Subagent spawned]`、`[sub] Tool> bash ...` 和 `s06-subagent-ok`。
+
+## s07：用到时再加载，别全塞 prompt 里
+
+**教学分支：** `s07-skill-loading`
+
+s07 解决的问题是：Agent 可能有很多技能说明，但把所有 `SKILL.md` 全塞进 system prompt 会浪费上下文。最小解法是启动时只注入技能目录，真正需要时再通过工具加载正文。
+
+本章新增：
+
+- `Skill`：普通 Java 数据类，保存 `name`、`description` 和 `body`。
+- `SkillRegistry`：扫描 `skills/*/SKILL.md`，解析 frontmatter，用 `name/description` 生成目录。
+- `LoadSkillTool`：工具名 `load_skill`，通过技能名返回 `<skill name="...">正文</skill>`。
+- `S07SkillLoadingDemo`：注册 s02 的五个基础工具和 `load_skill`。
+- `skills/code-review/SKILL.md`、`skills/java-cli/SKILL.md`：两个最小示例技能。
+
+### 两层加载
+
+s07 把技能分成两层：
+
+```text
+便宜层：system prompt 只放技能目录
+昂贵层：load_skill(name) 返回 <skill name="...">正文</skill>
+```
+
+`SkillRegistry` 只允许通过已扫描到的技能名查找内容，因此 `load_skill` 不接受任意路径，避免路径穿越。frontmatter 里的 `name` 和 `description` 用于生成目录，真正注入给模型的是正文 body。
+
+本章不注册 s06 的 `task` 工具，目的是让读者专注理解“先列目录，用到再展开”。
+
+### 验证
+
+编译命令：
+
+```sh
+mvn package -DskipTests
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+```
+
+启动 demo：
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s07.S07SkillLoadingDemo
+```
+
+真实 API smoke test：
+
+- prompt：`请调用 load_skill 加载 code-review 技能，然后只回答这个技能的 name 和第一句说明。`
+- 预期观察：控制台出现 `Tool> load_skill {"name":"code-review"}`，工具结果以 `<skill name="code-review">` 开头，并包含 `# Code Review Skill`。
