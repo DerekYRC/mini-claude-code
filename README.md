@@ -44,6 +44,27 @@ git switch s01-agent-loop
 
 详细讲解见 `changelog.md`。
 
+## 运行 s01
+
+先编译并生成依赖 classpath：
+
+```sh
+mvn test
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+```
+
+再运行 demo：
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s01.S01AgentLoopDemo
+```
+
+可以试这个输入，观察是否出现 `Tool> bash`：
+
+```text
+请务必调用 bash 工具执行：pwd。然后只回答工具输出。
+```
+
 ## 参考项目
 
 本项目参考 [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)。

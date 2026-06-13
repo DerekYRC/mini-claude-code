@@ -63,4 +63,29 @@ public class AnthropicLlmClientTest {
 		assertThat(content.getJSONObject(0).getString("signature")).isEqualTo("sig_1");
 		assertThat(content.getJSONObject(1).getString("type")).isEqualTo("text");
 	}
+
+	@Test
+	public void toRequestJsonIncludesSystemPrompt() {
+		AnthropicConfig config = new AnthropicConfig();
+		config.setModel("test-model");
+		config.setSystemPrompt(AnthropicConfig.systemPrompt("/tmp/work"));
+		AnthropicLlmClient client = new AnthropicLlmClient(config);
+
+		JSONObject request = client.toRequestJson(Collections.singletonList(Message.user("pwd")), Collections.emptyList());
+
+		assertThat(request.getString("system"))
+				.isEqualTo("You are a coding agent at /tmp/work. Use bash to solve tasks. Act, don't explain.");
+	}
+
+	@Test
+	public void requestHeadersMatchAnthropicMessagesApi() {
+		AnthropicConfig config = new AnthropicConfig();
+		config.setApiKey("test-key");
+		AnthropicLlmClient client = new AnthropicLlmClient(config);
+
+		assertThat(client.requestHeaders())
+				.containsEntry("x-api-key", "test-key")
+				.containsEntry("anthropic-version", "2023-06-01")
+				.containsEntry("content-type", "application/json");
+	}
 }
