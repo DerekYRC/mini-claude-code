@@ -316,3 +316,72 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 - prompt：`请调用 bash 工具执行：printf s04-hook-ok。然后只回答工具输出。`
 - 预期观察：控制台出现 `[HOOK] UserPromptSubmit`、`[HOOK] PreToolUse: bash ...`、工具输出 `s04-hook-ok`、以及 `[HOOK] Stop: session used 1 tool calls`。
+
+## s05：没有计划的 agent 走哪算哪
+
+**教学分支：** `s05-todo`
+
+s05 解决的问题是：复杂任务如果不先列步骤，Agent 容易边做边忘。最小解法是把“计划”也做成一个工具，让模型显式写下当前任务列表。
+
+本章新增：
+
+- `TodoItem`：普通 Java 数据类，保存 `content` 和 `status`。
+- `TodoWriteTool`：工具名 `todo_write`，用内存保存当前任务列表。
+- `S05TodoDemo`：在 s02 的五个工具基础上注册 `todo_write`，并在 system prompt 中要求“多步骤任务先计划，执行中更新状态”。
+
+### 核心变化
+
+s05 没有把计划逻辑写进主循环。循环仍然只做：
+
+```text
+LLM -> tool_use -> dispatch -> tool_result -> LLM
+```
+
+新增能力来自一个普通工具：
+
+```text
+todo_write -> TodoWriteTool -> currentTodos
+```
+
+所以本章仍然延续 s02 的原则：加一个工具，只加一个 handler。为了让本章更容易阅读，demo 没有继承 s03 的权限管线和 s04 的 Hook 展示代码，只保留理解 `todo_write` 所需的最小上下文。
+
+### todo_write 输入
+
+`todo_write` 接收完整的当前任务列表：
+
+```json
+{
+  "todos": [
+    {"content": "检查 s05 demo", "status": "in_progress"},
+    {"content": "总结结果", "status": "pending"}
+  ]
+}
+```
+
+状态只允许三种：
+
+- `pending`
+- `in_progress`
+- `completed`
+
+工具会替换当前内存中的 todo 列表，并返回一份可读的任务清单。它只负责记录计划，不直接执行任务。
+
+### 验证
+
+编译命令：
+
+```sh
+mvn package -DskipTests
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+```
+
+启动 demo：
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s05.S05TodoDemo
+```
+
+真实 API smoke test：
+
+- prompt：`请务必先调用 todo_write 工具，写入两个任务：检查 s05 demo 为 in_progress，总结结果为 pending。然后只回答 todo_write 的工具结果。`
+- 预期观察：控制台先出现 `Tool> todo_write ...`，工具结果包含 `Updated 2 tasks`、`[in_progress] 检查 s05 demo` 和 `[pending] 总结结果`。

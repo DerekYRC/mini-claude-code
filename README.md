@@ -107,6 +107,20 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 请调用 bash 工具执行：printf s04-hook-ok。然后只回答工具输出。
 ```
 
+## 运行 s05
+
+s05 加入 `todo_write` 工具，让 Agent 在多步骤任务前先写计划，并在执行中更新状态。
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s05.S05TodoDemo
+```
+
+可以试这个输入，观察是否先出现 `Tool> todo_write`：
+
+```text
+请务必先调用 todo_write 工具，写入两个任务：检查 s05 demo 为 in_progress，总结结果为 pending。然后只回答 todo_write 的工具结果。
+```
+
 ## 参考项目
 
 本项目参考 [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)。
