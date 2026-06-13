@@ -16,7 +16,9 @@ import org.miniclaudecode.core.UnknownBlock;
 import org.miniclaudecode.tool.ToolDefinition;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AnthropicLlmClient implements LlmClient {
 
@@ -29,18 +31,24 @@ public class AnthropicLlmClient implements LlmClient {
 	@Override
 	public AssistantMessage chat(List<Message> messages, List<ToolDefinition> tools) {
 		String body = JSON.toJSONString(toRequestJson(messages, tools));
-		HttpResponse response = HttpRequest.post(messagesUrl())
-				.header("x-api-key", config.getApiKey())
-				.header("anthropic-version", "2023-06-01")
-				.contentType("application/json")
-				.timeout(config.getTimeoutMillis())
-				.body(body)
-				.execute();
+		HttpRequest request = HttpRequest.post(messagesUrl()).timeout(config.getTimeoutMillis()).body(body);
+		for (Map.Entry<String, String> header : requestHeaders().entrySet()) {
+			request.header(header.getKey(), header.getValue());
+		}
+		HttpResponse response = request.execute();
 
 		if (response.getStatus() < 200 || response.getStatus() >= 300) {
 			throw new IllegalStateException("LLM request failed: HTTP " + response.getStatus() + "\n" + response.body());
 		}
 		return parseResponse(response.body());
+	}
+
+	public Map<String, String> requestHeaders() {
+		Map<String, String> headers = new LinkedHashMap<>();
+		headers.put("x-api-key", config.getApiKey());
+		headers.put("anthropic-version", "2023-06-01");
+		headers.put("content-type", "application/json");
+		return headers;
 	}
 
 	public AssistantMessage parseResponse(String body) {
@@ -75,6 +83,9 @@ public class AnthropicLlmClient implements LlmClient {
 		JSONObject request = new JSONObject();
 		request.put("model", config.getModel());
 		request.put("max_tokens", config.getMaxTokens());
+		if (config.getSystemPrompt() != null && !config.getSystemPrompt().isBlank()) {
+			request.put("system", config.getSystemPrompt());
+		}
 		request.put("messages", toMessagesJson(messages));
 		if (tools != null && !tools.isEmpty()) {
 			request.put("tools", toToolsJson(tools));

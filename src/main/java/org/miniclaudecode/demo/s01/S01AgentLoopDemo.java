@@ -1,14 +1,20 @@
 package org.miniclaudecode.demo.s01;
 
+import org.miniclaudecode.core.AgentLoopListener;
 import org.miniclaudecode.core.AssistantMessage;
 import org.miniclaudecode.core.ContentBlock;
+import org.miniclaudecode.core.Message;
 import org.miniclaudecode.core.TextBlock;
+import org.miniclaudecode.core.ToolUseBlock;
 import org.miniclaudecode.llm.AnthropicConfig;
 import org.miniclaudecode.llm.AnthropicLlmClient;
 import org.miniclaudecode.tool.BashTool;
+import org.miniclaudecode.tool.ToolResult;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Scanner;
 
 public class S01AgentLoopDemo {
@@ -21,15 +27,44 @@ public class S01AgentLoopDemo {
 
 		org.miniclaudecode.core.AgentLoop loop = new org.miniclaudecode.core.AgentLoop(
 				new AnthropicLlmClient(config),
-				Collections.singletonList(new BashTool(new File("."))));
+				Collections.singletonList(new BashTool(new File("."))),
+				new AgentLoopListener() {
+					@Override
+					public void beforeToolUse(ToolUseBlock toolUse) {
+						System.out.println("Tool> " + toolUse.getName() + " " + toolUse.getInput());
+					}
 
+					@Override
+					public void afterToolUse(ToolUseBlock toolUse, ToolResult result) {
+						System.out.println("ToolResult> " + result.getContent());
+					}
+				});
+
+		System.out.println("s01: Agent Loop");
+		System.out.println("输入问题，回车发送。输入 q 退出。\n");
+
+		List<Message> history = new ArrayList<>();
 		Scanner scanner = new Scanner(System.in);
-		System.out.print("You> ");
-		AssistantMessage answer = loop.run(scanner.nextLine());
-		for (ContentBlock block : answer.getContent()) {
-			if (block instanceof TextBlock) {
-				System.out.println("Claude> " + ((TextBlock) block).getText());
+		while (true) {
+			System.out.print("s01 >> ");
+			if (!scanner.hasNextLine()) {
+				break;
 			}
+
+			String query = scanner.nextLine();
+			if (query == null || query.isBlank() || "q".equalsIgnoreCase(query.trim())
+					|| "exit".equalsIgnoreCase(query.trim())) {
+				break;
+			}
+
+			history.add(Message.user(query));
+			AssistantMessage answer = loop.run(history);
+			for (ContentBlock block : answer.getContent()) {
+				if (block instanceof TextBlock) {
+					System.out.println(((TextBlock) block).getText());
+				}
+			}
+			System.out.println();
 		}
 	}
 

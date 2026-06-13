@@ -34,7 +34,10 @@ public class AgentLoop {
 	public AssistantMessage run(String prompt) {
 		List<Message> messages = new ArrayList<>();
 		messages.add(Message.user(prompt));
+		return run(messages);
+	}
 
+	public AssistantMessage run(List<Message> messages) {
 		for (int turn = 0; turn < 20; turn++) {
 			AssistantMessage response = llmClient.chat(messages, toolDefinitions());
 			listener.onAssistantMessage(response);

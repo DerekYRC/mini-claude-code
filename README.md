@@ -14,7 +14,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 
 不要把 API Key 写入仓库文件。
 
-所有 demo 都依赖真实 Anthropic 兼容 API；单元测试使用 mock/fake，不依赖网络和密钥。
+所有章节都直接启动 demo 连接真实 Anthropic 兼容 API 进行验证，不再编写单元测试。不要把 API Key 写入仓库文件。
 
 ## 学习路线
 
@@ -43,6 +43,27 @@ git switch s01-agent-loop
 ```
 
 详细讲解见 `changelog.md`。
+
+## 运行 s01
+
+先编译并生成依赖 classpath：
+
+```sh
+mvn package -DskipTests
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+```
+
+再运行 demo：
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s01.S01AgentLoopDemo
+```
+
+可以试这个输入，观察是否出现 `Tool> bash`：
+
+```text
+请务必调用 bash 工具执行：pwd。然后只回答工具输出。
+```
 
 ## 参考项目
 

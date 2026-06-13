@@ -20,6 +20,7 @@
 
 答案是：
 
+- 一段告诉模型“你是谁、当前工作目录在哪、什么时候用工具”的 `system` prompt
 - 一个能和模型对话的 `LlmClient`
 - 一个能描述和执行工具的 `Tool`
 - 一个负责“模型 -> 工具 -> 模型”的 `AgentLoop`
@@ -28,7 +29,7 @@
 
 `AgentLoop.run()` 做的事情很少：
 
-1. 把用户输入包装成 `user` 消息。
+1. demo 把用户输入追加到 `history`，支持连续输入。
 2. 调用 `LlmClient.chat()`，把历史消息和工具定义发给模型。
 3. 如果模型返回 `tool_use`，找到同名工具并执行。
 4. 把执行结果包装成 `tool_result`，继续发给模型。
@@ -39,6 +40,17 @@
 ### 真实 API 适配
 
 `AnthropicLlmClient` 使用 Hutool HTTP 调用 Anthropic Messages 兼容接口，并使用 FastJSON 组装和解析 JSON。
+
+请求顶层会带上最小 system prompt：
+
+- 参考 s01 原始实现的风格：`You are a coding agent at <workdir>. Use bash to solve tasks. Act, don't explain.`
+- `<workdir>` 来自当前 Java 进程工作目录，对齐 bash 工具实际执行目录。
+
+Java 版没有使用 Anthropic Python SDK，而是用 Hutool 手写 HTTP，因此显式设置 Anthropic Messages API 所需请求头：
+
+- `x-api-key`
+- `anthropic-version`
+- `content-type`
 
 请求中的工具定义会被序列化成：
 
@@ -65,15 +77,28 @@
 
 它故意不做权限判断。权限边界会放到 s03，让读者能单独看到“先判断能不能做，再决定要不要问用户”的机制。
 
-### 测试
+### 验证
 
-本章测试使用 fake/mock，不依赖网络和密钥：
-
-- `AnthropicLlmClientTest`：验证 `thinking`、`text`、`tool_use` 的解析，以及 `thinking` 回写到 assistant 历史消息。
-- `AgentLoopTest`：验证模型要求调用工具时，loop 会执行工具，并把 `tool_result` 作为新的 user 消息发回模型。
-
-验证命令：
+本项目按主人要求直接启动 demo 连接真实 API 进行验证，不再保留单元测试。编译命令：
 
 ```sh
-mvn test
+mvn package -DskipTests
 ```
+
+测试：
+
+- 启动demo：`org.miniclaudecode.demo.s01.S01AgentLoopDemo`
+- 输入：
+
+```text
+创建一个输出hello world的python文件
+```
+- 观察控制台输出
+也可以试一个更贴近编码 agent 的例子：创建一个输出 `hello world` 的 Python 文件。
+
+
+预期观察：
+
+- 模型调用 `bash` 创建文件，例如写入 `print("hello world")`。
+- 控制台出现 `Tool> bash ...` 和 `ToolResult> exit_code=0`。
+- 运行 `python3 hello.py` 时输出 `hello world`。
