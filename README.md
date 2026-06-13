@@ -65,6 +65,20 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 请务必调用 bash 工具执行：pwd。然后只回答工具输出。
 ```
 
+## 运行 s02
+
+s02 在 s01 基础上加入 `ToolRegistry` 和 `read_file` 工具。
+
+```sh
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s02.S02ToolDispatchDemo
+```
+
+可以试这个输入，观察是否出现 `Tool> read_file`：
+
+```text
+请调用 read_file 工具读取 README.md 的前 3 行，然后回答你读到的内容。
+```
+
 ## 参考项目
 
 本项目参考 [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)。
