@@ -1,6 +1,8 @@
 package org.miniclaudecode.core;
 
 import org.miniclaudecode.llm.LlmClient;
+import org.miniclaudecode.permission.PermissionDecision;
+import org.miniclaudecode.permission.PermissionManager;
 import org.miniclaudecode.tool.Tool;
 import org.miniclaudecode.tool.ToolDefinition;
 import org.miniclaudecode.tool.ToolRegistry;
@@ -17,14 +19,22 @@ public class AgentLoop {
 
 	private final AgentLoopListener listener;
 
+	private final PermissionManager permissionManager;
+
 	public AgentLoop(LlmClient llmClient, List<Tool> tools) {
 		this(llmClient, tools, new AgentLoopListener() {
-		});
+		}, null);
 	}
 
 	public AgentLoop(LlmClient llmClient, List<Tool> tools, AgentLoopListener listener) {
+		this(llmClient, tools, listener, null);
+	}
+
+	public AgentLoop(LlmClient llmClient, List<Tool> tools, AgentLoopListener listener,
+			PermissionManager permissionManager) {
 		this.llmClient = llmClient;
 		this.listener = listener;
+		this.permissionManager = permissionManager;
 		this.toolRegistry = new ToolRegistry();
 		for (Tool tool : tools) {
 			this.toolRegistry.register(tool);
@@ -33,13 +43,19 @@ public class AgentLoop {
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry) {
 		this(llmClient, toolRegistry, new AgentLoopListener() {
-		});
+		}, null);
 	}
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener) {
+		this(llmClient, toolRegistry, listener, null);
+	}
+
+	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener,
+			PermissionManager permissionManager) {
 		this.llmClient = llmClient;
 		this.toolRegistry = toolRegistry;
 		this.listener = listener;
+		this.permissionManager = permissionManager;
 	}
 
 	public AssistantMessage run(String prompt) {
@@ -76,6 +92,11 @@ public class AgentLoop {
 			if (block instanceof ToolUseBlock) {
 				ToolUseBlock toolUse = (ToolUseBlock) block;
 				listener.beforeToolUse(toolUse);
+				PermissionDecision decision = checkPermission(toolUse);
+				if (!decision.isAllowed()) {
+					results.add(new ToolResultBlock(toolUse.getId(), decision.getMessage()));
+					continue;
+				}
 				ToolResult result = executeTool(toolUse);
 				listener.afterToolUse(toolUse, result);
 				results.add(new ToolResultBlock(toolUse.getId(), result.getContent()));
@@ -90,5 +111,12 @@ public class AgentLoop {
 			return new ToolResult("Unknown tool: " + toolUse.getName());
 		}
 		return tool.execute(toolUse.getInput());
+	}
+
+	private PermissionDecision checkPermission(ToolUseBlock toolUse) {
+		if (permissionManager == null) {
+			return PermissionDecision.allow();
+		}
+		return permissionManager.check(toolUse);
 	}
 }
