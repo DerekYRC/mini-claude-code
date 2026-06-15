@@ -26,8 +26,8 @@ public class S01AgentLoopDemo {
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
-
 		AnthropicLlmClient llmClient = new AnthropicLlmClient(config);
+
 		List<Tool> tools = Collections.singletonList(new BashTool(new File(".")));
 		AgentLoopListener loopListener = new AgentLoopListener() {
 			@Override
