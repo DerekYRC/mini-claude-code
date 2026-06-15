@@ -80,15 +80,20 @@ Java 版没有使用 Anthropic Python SDK，而是用 Hutool 手写 HTTP，因�
 
 ### 验证
 
-本项目按主人要求直接启动 demo 连接真实 API 进行验证，不再保留单元测试。编译命令：
+本项目按主人要求直接启动 demo 连接真实 API 进行验证，不再保留单元测试。启动命令：
 
 ```sh
-mvn package -DskipTests
+git switch s01-agent-loop
+
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s01.S01AgentLoopDemo
 ```
 
 测试：
 
-- 启动demo：`org.miniclaudecode.demo.s01.S01AgentLoopDemo`
 - 输入：
 
 ```text
@@ -190,17 +195,16 @@ glob       Find files by pattern.
 
 ### 验证
 
-编译命令：
+启动命令：
 
 ```sh
-mvn package -DskipTests
-mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-```
+git switch s02-tool-dispatch
 
-启动 demo：
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
 
-```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s02.S02ToolDispatchDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s02.S02ToolDispatchDemo
 ```
 
 真实 API smoke test：
@@ -237,17 +241,16 @@ LLM -> tool_use -> permission -> execute tool -> tool_result -> LLM
 
 ### 验证
 
-编译命令：
+启动命令：
 
 ```sh
-mvn package -DskipTests
-mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-```
+git switch s03-permission
 
-启动 demo：
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
 
-```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s03.S03PermissionDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s03.S03PermissionDemo
 ```
 
 真实 API smoke test：
@@ -301,17 +304,16 @@ s04 解决的问题是：权限、日志、输出检查、停止统计这些能�
 
 ### 验证
 
-编译命令：
+启动命令：
 
 ```sh
-mvn package -DskipTests
-mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-```
+git switch s04-hooks
 
-启动 demo：
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
 
-```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s04.S04HooksDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s04.S04HooksDemo
 ```
 
 真实 API smoke test：
@@ -370,17 +372,16 @@ todo_write -> TodoWriteTool -> currentTodos
 
 ### 验证
 
-编译命令：
+启动命令：
 
 ```sh
-mvn package -DskipTests
-mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-```
+git switch s05-todo
 
-启动 demo：
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
 
-```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s05.S05TodoDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s05.S05TodoDemo
 ```
 
 真实 API smoke test：
@@ -418,17 +419,16 @@ Parent messages[] -> task(description)
 
 ### 验证
 
-编译命令：
+启动命令：
 
 ```sh
-mvn package -DskipTests
-mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-```
+git switch s06-subagent
 
-启动 demo：
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
 
-```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s06.S06SubagentDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s06.S06SubagentDemo
 ```
 
 真实 API smoke test：
@@ -465,17 +465,16 @@ s07 把技能分成两层：
 
 ### 验证
 
-编译命令：
+启动命令：
 
 ```sh
-mvn package -DskipTests
-mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-```
+git switch s07-skill-loading
 
-启动 demo：
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
 
-```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s07.S07SkillLoadingDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s07.S07SkillLoadingDemo
 ```
 
 真实 API smoke test：
