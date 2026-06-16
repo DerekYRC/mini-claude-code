@@ -1,5 +1,8 @@
 package org.miniclaudecode.tool;
 
+/**
+ * 普通数据类，不使用 record，保存任务内容和状态。
+ */
 public class TodoItem {
 
 	private String content;
