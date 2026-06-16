@@ -286,9 +286,18 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s03.S03Permiss
 
 真实 API smoke test：
 
-- prompt：`请调用 bash 工具执行：chmod 777 changelog.md`
-- 输入确认：输入 `n`
-- 预期观察：控制台出现 `Permission> Potentially destructive command` 和 `Allow? [y/N]`，拒绝后工具不会执行，模型收到 `Permission denied by user...`。
+试试这些 prompt：
+
+1. `在当前目录创建一个名为 test.txt 的文件`
+2. `删除 /tmp 目录中的所有临时文件`
+3. `当前目录里有哪些文件？`
+4. `尝试把一个文件写入 /etc/something`
+
+预期观察：
+
+- 工作区内普通写文件可以直接通过。
+- 只读查询可以直接通过。
+- `rm`、写入 `/etc` 等危险或越界操作会被权限管线拦截；需要确认时会出现 `Permission>` 和 `Allow? [y/N]`。
 
 ### 源码注释补充
 
