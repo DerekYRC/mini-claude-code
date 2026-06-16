@@ -1,5 +1,8 @@
 package org.miniclaudecode.core;
 
+/**
+ * 模型可能返回的 thinking block，保留 signature 便于后续请求原样带回。
+ */
 public class ThinkingBlock extends ContentBlock {
 
 	private String thinking;

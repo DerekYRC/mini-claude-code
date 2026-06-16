@@ -19,6 +19,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * s01 启动入口：注册一个 bash 工具，然后把用户输入不断交给 AgentLoop。
+ */
 public class S01AgentLoopDemo {
 
 	public static void main(String[] args) {
@@ -28,6 +31,7 @@ public class S01AgentLoopDemo {
 		config.setModel(requiredEnv("MODEL_ID"));
 		AnthropicLlmClient llmClient = new AnthropicLlmClient(config);
 
+		// s01 只有一个工具，先让读者把“工具闭环”看清楚。
 		List<Tool> tools = Collections.singletonList(new BashTool(new File(".")));
 		AgentLoopListener loopListener = new AgentLoopListener() {
 			@Override
@@ -62,6 +66,7 @@ public class S01AgentLoopDemo {
 				break;
 			}
 
+			// history 留在 demo 外层，支持用户连续输入时保留上下文。
 			history.add(Message.user(query));
 			AssistantMessage answer = loop.run(history);
 			for (ContentBlock block : answer.getContent()) {

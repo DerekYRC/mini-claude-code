@@ -1,5 +1,8 @@
 package org.miniclaudecode.core;
 
+/**
+ * Anthropic Messages 里的 content block 基类。
+ */
 public abstract class ContentBlock {
 
 	private String type;

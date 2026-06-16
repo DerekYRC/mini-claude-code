@@ -2,6 +2,9 @@ package org.miniclaudecode.core;
 
 import com.alibaba.fastjson.JSONObject;
 
+/**
+ * 模型请求调用工具时返回的 block，name 决定要执行哪个 Tool。
+ */
 public class ToolUseBlock extends ContentBlock {
 
 	private String id;

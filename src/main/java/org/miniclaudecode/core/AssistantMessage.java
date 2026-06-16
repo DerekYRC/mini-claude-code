@@ -2,6 +2,9 @@ package org.miniclaudecode.core;
 
 import java.util.List;
 
+/**
+ * 模型返回的 assistant 消息，包含 content blocks 和 stop_reason。
+ */
 public class AssistantMessage {
 
 	private List<ContentBlock> content;

@@ -20,6 +20,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 最小 Anthropic Messages HTTP 客户端。
+ *
+ * 本项目不用 SDK，而是用 Hutool + FastJSON 显式展示请求和响应结构，
+ * 方便读者看到 Claude Code 风格 Agent 到底给模型发送了什么。
+ */
 public class AnthropicLlmClient implements LlmClient {
 
 	private final AnthropicConfig config;
@@ -31,7 +37,7 @@ public class AnthropicLlmClient implements LlmClient {
 	@Override
 	public AssistantMessage chat(List<Message> messages, List<ToolDefinition> tools) {
 		String body = JSON.toJSONString(toRequestJson(messages, tools));
-		HttpRequest request = HttpRequest.post(messagesUrl()).timeout(config.getTimeoutMillis()).body(body);
+		HttpRequest request = HttpRequest.post(messagesUrl()).body(body);
 		for (Map.Entry<String, String> header : requestHeaders().entrySet()) {
 			request.header(header.getKey(), header.getValue());
 		}
@@ -62,6 +68,7 @@ public class AnthropicLlmClient implements LlmClient {
 					blocks.add(new TextBlock(valueOrEmpty(block, "text")));
 				}
 				else if ("thinking".equals(type)) {
+					// 真实 API 可能返回 thinking block；保留 signature，后续历史消息可以原样带回。
 					blocks.add(new ThinkingBlock(valueOrEmpty(block, "thinking"), block.getString("signature")));
 				}
 				else if ("tool_use".equals(type)) {
@@ -70,6 +77,7 @@ public class AnthropicLlmClient implements LlmClient {
 							input == null ? new JSONObject() : input));
 				}
 				else {
+					// 新类型先保留原始 JSON，教学代码不因为未知 block 直接丢上下文。
 					blocks.add(new UnknownBlock(type, block));
 				}
 			}
@@ -79,6 +87,7 @@ public class AnthropicLlmClient implements LlmClient {
 	}
 
 	public JSONObject toRequestJson(List<Message> messages, List<ToolDefinition> tools) {
+		// 请求体只包含本章需要的最小字段：model、max_tokens、system、messages、tools。
 		JSONObject request = new JSONObject();
 		request.put("model", config.getModel());
 		request.put("max_tokens", config.getMaxTokens());

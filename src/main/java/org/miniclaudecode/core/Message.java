@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * 发给模型的单条消息，role 只能是 user 或 assistant。
+ */
 public class Message {
 
 	private String role;
@@ -28,6 +31,7 @@ public class Message {
 	}
 
 	public static Message toolResults(List<ToolResultBlock> results) {
+		// 工具结果按协议放在 user 消息里，和 assistant 的 tool_use 一一对应。
 		return new Message("user", new ArrayList<ContentBlock>(results));
 	}
 
