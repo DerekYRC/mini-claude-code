@@ -14,8 +14,6 @@ public class AnthropicConfig {
 
 	private int maxTokens = DEFAULT_MAX_TOKENS;
 
-	private int timeoutMillis = 120000;
-
 	public static String systemPrompt(String workdir) {
 		return "You are a coding agent at " + workdir + ". Use bash to solve tasks. Act, don't explain.";
 	}
@@ -58,13 +56,5 @@ public class AnthropicConfig {
 
 	public void setMaxTokens(int maxTokens) {
 		this.maxTokens = maxTokens;
-	}
-
-	public int getTimeoutMillis() {
-		return timeoutMillis;
-	}
-
-	public void setTimeoutMillis(int timeoutMillis) {
-		this.timeoutMillis = timeoutMillis;
 	}
 }

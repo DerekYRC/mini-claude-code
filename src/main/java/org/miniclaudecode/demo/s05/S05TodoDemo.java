@@ -23,6 +23,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * s05 启动入口：把“先计划再执行”的约束交给 todo_write 工具和 system prompt。
+ */
 public class S05TodoDemo {
 
 	public static void main(String[] args) {
@@ -30,6 +33,7 @@ public class S05TodoDemo {
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
+		// prompt 约束模型在多步骤任务前先调用 todo_write，而不是改 AgentLoop。
 		config.setSystemPrompt("You are a coding agent at " + System.getProperty("user.dir")
 				+ ". Before starting any multi-step task, use todo_write to plan your steps. "
 				+ "Keep exactly one task in_progress while working. Mark tasks completed as you finish. "

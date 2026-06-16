@@ -31,7 +31,7 @@ public class AnthropicLlmClient implements LlmClient {
 	@Override
 	public AssistantMessage chat(List<Message> messages, List<ToolDefinition> tools) {
 		String body = JSON.toJSONString(toRequestJson(messages, tools));
-		HttpRequest request = HttpRequest.post(messagesUrl()).timeout(config.getTimeoutMillis()).body(body);
+		HttpRequest request = HttpRequest.post(messagesUrl()).body(body);
 		for (Map.Entry<String, String> header : requestHeaders().entrySet()) {
 			request.header(header.getKey(), header.getValue());
 		}
