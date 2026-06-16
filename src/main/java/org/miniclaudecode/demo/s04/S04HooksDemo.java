@@ -1,6 +1,7 @@
 package org.miniclaudecode.demo.s04;
 
 import org.miniclaudecode.core.AgentLoop;
+import org.miniclaudecode.core.AgentLoopListener;
 import org.miniclaudecode.core.AssistantMessage;
 import org.miniclaudecode.core.ContentBlock;
 import org.miniclaudecode.core.Message;
@@ -31,7 +32,6 @@ import java.util.Scanner;
  */
 public class S04HooksDemo {
 
-	// system prompt 放在 demo 顶部，便于对照本章 hook 扩展点。
 	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
 			+ ". Use tools to solve tasks. Act, don't explain.";
 
@@ -51,7 +51,7 @@ public class S04HooksDemo {
 				.register(new EditFileTool(workdir))
 				.register(new GlobTool(workdir));
 		HookManager hookManager = hooks(workdir, scanner);
-		AgentLoop loop = new AgentLoop(new AnthropicLlmClient(config), registry, new org.miniclaudecode.core.AgentLoopListener() {
+		AgentLoop loop = new AgentLoop(new AnthropicLlmClient(config), registry, new AgentLoopListener() {
 		}, hookManager);
 
 		System.out.println("s04: Hooks");
