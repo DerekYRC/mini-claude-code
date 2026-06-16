@@ -13,6 +13,7 @@
 - s05 Todo：没有计划的 agent 走哪算哪，分支 `s05-todo`
 - s06 Subagent：大任务拆小，每个小任务干净的上下文，分支 `s06-subagent`
 - s07 Skill Loading：用到时再加载，别全塞 prompt 里，分支 `s07-skill-loading`
+- s08 Context Compact：上下文总会满，要有办法腾地方，分支 `s08-context-compact`
 
 ## s01：One loop & Bash is all you need
 
@@ -617,3 +618,91 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s07.S07SkillLo
 本章将 system prompt 主体作为 `S07SkillLoadingDemo` 顶部的 `SYSTEM_PROMPT_TEMPLATE` 静态变量，运行时只填入技能目录。
 
 `AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
+
+## s08：上下文总会满，要有办法腾地方
+
+**教学分支：** `s08-context-compact`
+
+s08 解决的问题是：工具输出和多轮对话会持续挤占上下文，Agent 需要在 LLM 调用前主动腾地方。最小解法是把压缩做成一条挂在循环前的管线，再用 `compact` 工具提供一次显式触发入口。
+
+本章新增：
+
+- `MessageInspector`：集中判断 `tool_use`、`tool_result` 和消息大小。
+- `ToolResultStore`：把超大的工具结果写到 `.task_outputs/tool-results/`。
+- `TranscriptStore`：压缩前把完整历史保存到 `.transcripts/`。
+- `CompactionPipeline`：按固定顺序执行四层压缩。
+- `CompactTool`：暴露 `compact` 工具定义，真正压缩由循环处理。
+- `CompactingAgentLoop`：s08 专用循环，在 LLM 前运行压缩管线，并特殊处理 `compact`。
+- `S08ContextCompactDemo`：注册 `bash/read_file/write_file/edit_file/glob/load_skill/compact`。
+
+### 四层压缩顺序
+
+s08 的压缩不是按编号跑，而是按成本和信息保真度跑：
+
+```text
+toolResultBudget -> snipCompact -> microCompact -> compactHistory
+```
+
+含义分别是：
+
+- `toolResultBudget`：最后一条 `tool_result` 太大时，先把原文落盘，只把文件路径和预览留在上下文。
+- `snipCompact`：消息数量太多时裁掉中间历史，但不能拆散 `assistant(tool_use)` 和后续 `user(tool_result)`。
+- `microCompact`：保留最近 3 条工具结果，旧工具结果改成短占位符。
+- `compactHistory`：最后才额外调用 LLM 生成摘要，并在摘要前保存完整 transcript。
+
+这个顺序很重要：便宜的、保真度高的先做，昂贵的摘要最后才做。
+
+### compact 工具
+
+`compact` 工具只提供模型可见的工具定义：
+
+```json
+{
+  "name": "compact",
+  "description": "Summarize earlier conversation to free context space.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "focus": {"type": "string"}
+    }
+  }
+}
+```
+
+普通工具拿不到 `messages`，所以 `CompactTool.execute()` 不真正压缩。`CompactingAgentLoop` 看到模型调用 `compact` 后，会先摘要历史，再把 compact 的 `tool_use/tool_result` 配对补回消息，避免下一轮 Anthropic API 收到不完整工具调用。
+
+### 验证
+
+启动命令：
+
+```sh
+git switch s08-context-compact
+
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s08.S08ContextCompactDemo
+```
+
+真实 API smoke test：
+
+试试这些 prompt：
+
+1. `读取 README.md，然后读取 changelog.md，再读取 src/main/java/org/miniclaudecode/demo/s01/S01AgentLoopDemo.java`
+2. `读取 src/main/java/org/miniclaudecode/compact 下的每个文件`
+3. 反复对话 20 轮以上，观察是否出现 `[auto compact]` 或 `[reactive compact]`
+
+预期观察：
+
+- 旧 `tool_result` 会被压成 `[Earlier tool result compacted. Re-run if needed.]`。
+- 大工具结果会落盘到 `.task_outputs/tool-results/`。
+- 自动或手动压缩会保存 `.transcripts/transcript_*.jsonl`。
+
+本次自动验证使用更短的显式 compact prompt：
+
+```text
+请调用 compact 工具，focus 参数写 s08-smoke，然后只回答压缩已完成。
+```
+
+预期控制台出现 `Tool> compact ...`、`[transcript saved: ...]` 和 `[Compacted. History summarized.]`。
