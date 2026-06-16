@@ -1,5 +1,10 @@
 package org.miniclaudecode.permission;
 
+/**
+ * 权限管线给 AgentLoop 的判断结果。
+ *
+ * 主循环只关心是否允许执行，以及拒绝时要回传给模型的说明。
+ */
 public class PermissionDecision {
 
 	private boolean allowed;
