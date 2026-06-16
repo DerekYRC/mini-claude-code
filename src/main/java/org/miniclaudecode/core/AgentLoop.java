@@ -19,7 +19,7 @@ import java.util.List;
  * 聚合版 Agent 循环。
  *
  * s01 展示 LLM -> 工具 -> LLM 的闭环，s02 开始把工具查找交给 ToolRegistry；
- * s03 在工具执行前加入 PermissionManager，后续章节继续挂 hook 和子 Agent 等能力。
+ * s03 在工具执行前加入 PermissionManager，s04 开始在固定位置触发 hook。
  */
 public class AgentLoop {
 
@@ -140,6 +140,7 @@ public class AgentLoop {
 					results.add(new ToolResultBlock(toolUse.getId(), decision.getMessage()));
 					continue;
 				}
+				// PreToolUse 位于工具真正执行前，可以阻断本次工具调用。
 				HookDecision hookDecision = triggerPreToolUseHooks(toolUse);
 				if (hookDecision.isBlocked()) {
 					results.add(new ToolResultBlock(toolUse.getId(), hookDecision.getMessage()));
@@ -147,6 +148,7 @@ public class AgentLoop {
 				}
 				ToolResult result = executeTool(toolUse);
 				listener.afterToolUse(toolUse, result);
+				// PostToolUse 位于工具执行后，适合记录日志或检查输出。
 				triggerPostToolUseHooks(toolUse, result);
 				results.add(new ToolResultBlock(toolUse.getId(), result.getContent()));
 			}
@@ -193,6 +195,7 @@ public class AgentLoop {
 		if (hookManager == null) {
 			return;
 		}
+		// Stop 位于循环结束时，适合做会话级统计。
 		HookContext context = new HookContext(HookEvent.STOP);
 		context.setMessages(messages);
 		hookManager.trigger(HookEvent.STOP, context);

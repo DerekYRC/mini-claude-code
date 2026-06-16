@@ -6,6 +6,12 @@ import org.miniclaudecode.tool.ToolResult;
 
 import java.util.List;
 
+/**
+ * Hook 执行时看到的上下文。
+ *
+ * 不同事件只填充自己需要的字段，例如 PreToolUse 有 toolUse，
+ * Stop 有 messages，UserPromptSubmit 有 userPrompt。
+ */
 public class HookContext {
 
 	private String event;
