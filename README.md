@@ -27,6 +27,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s05 Todo
 - s06 Subagent
 - s07 Skill Loading
+- s08 Context Compact
 
 ## 分支学习
 
@@ -39,6 +40,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s05-todo`
 - `s06-subagent`
 - `s07-skill-loading`
+- `s08-context-compact`
 
 切换示例：
 
@@ -161,6 +163,22 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s07.S07SkillLo
 3. `我需要做一次代码审查，请先加载相关技能`
 
 观察重点：Agent 是否直接从 system prompt 里的目录知道有哪些技能；需要完整规范时是否出现 `Tool> load_skill`；加载后回答是否使用了对应 skill 的说明。
+
+## 运行 s08
+
+s08 在 LLM 前加入四层压缩管线，并把 `compact` 做成一个控制工具。大工具结果会先落盘，长历史会裁剪或摘要。
+
+```sh
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s08.S08ContextCompactDemo
+```
+
+试试这些 prompt：
+
+1. `读取 README.md，然后读取 changelog.md，再读取 src/main/java/org/miniclaudecode/demo/s01/S01AgentLoopDemo.java`
+2. `读取 src/main/java/org/miniclaudecode/compact 下的每个文件`
+3. 反复对话 20 轮以上，观察是否出现 `[auto compact]` 或 `[reactive compact]`
+
+观察重点：每次工具执行后，旧 `tool_result` 是否被压缩；连续对话超过阈值时，是否保存 `.transcripts/` 并触发摘要。
 
 ## 参考项目
 
