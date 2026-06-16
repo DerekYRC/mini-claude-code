@@ -24,7 +24,6 @@ import java.util.Scanner;
  */
 public class S01AgentLoopDemo {
 
-	// system prompt 放在 demo 顶部，便于对照本章角色和工具边界。
 	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
 			+ ". Use bash to solve tasks. Act, don't explain.";
 

@@ -10,6 +10,12 @@ import org.miniclaudecode.core.TextBlock;
 import org.miniclaudecode.core.ToolUseBlock;
 import org.miniclaudecode.llm.LlmClient;
 
+/**
+ * 子 Agent 工具。
+ *
+ * 父 Agent 调用 task 时，这个工具会创建一段全新的 messages，
+ * 让子 Agent 在干净上下文中完成 description 描述的任务。
+ */
 public class TaskTool implements Tool {
 
 	private final LlmClient subagentClient;
@@ -22,6 +28,19 @@ public class TaskTool implements Tool {
 	}
 
 	@Override
+	/*
+	 * {
+	 *   "name": "task",
+	 *   "description": "Launch a subagent for a complex subtask. Returns only the final summary.",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "description": {"type": "string", "description": "Subtask for a fresh-context subagent"}
+	 *     },
+	 *     "required": ["description"]
+	 *   }
+	 * }
+	 */
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()
 				.fluentPut("description", new JSONObject()
@@ -44,6 +63,7 @@ public class TaskTool implements Tool {
 		}
 
 		System.out.println("[Subagent spawned]");
+		// 子 Agent 不复用父 Agent 的 history，这是本章“干净上下文”的核心。
 		AgentLoop subLoop = new AgentLoop(subagentClient, subagentTools, new AgentLoopListener() {
 			@Override
 			public void beforeToolUse(ToolUseBlock toolUse) {
@@ -52,6 +72,7 @@ public class TaskTool implements Tool {
 		}, 30);
 		AssistantMessage answer = subLoop.run(description);
 		System.out.println("[Subagent done]");
+		// 父 Agent 只拿到最终摘要，不拿到子 Agent 的完整中间消息。
 		return new ToolResult(extractText(answer));
 	}
 

@@ -8,11 +8,45 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * 计划记录工具。
+ *
+ * s05 把“先列计划”做成一个普通工具，而不是写进 AgentLoop。
+ * 工具只保存当前 todo 列表，不直接执行任何任务。
+ */
 public class TodoWriteTool implements Tool {
 
 	private final List<TodoItem> currentTodos = new ArrayList<>();
 
 	@Override
+	/*
+	 * {
+	 *   "name": "todo_write",
+	 *   "description": "Create or replace the current task list",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "todos": {
+	 *         "type": "array",
+	 *         "items": {
+	 *           "type": "object",
+	 *           "properties": {
+	 *             "content": {"type": "string", "description": "Task content"},
+	 *             "status": {
+	 *               "type": "string",
+	 *               "enum": ["pending", "in_progress", "completed"],
+	 *               "description": "Task status"
+	 *             }
+	 *           },
+	 *           "required": ["content", "status"]
+	 *         },
+	 *         "description": "Full current todo list"
+	 *       }
+	 *     },
+	 *     "required": ["todos"]
+	 *   }
+	 * }
+	 */
 	public ToolDefinition getDefinition() {
 		JSONObject todoProperties = new JSONObject()
 				.fluentPut("content", new JSONObject()
@@ -50,6 +84,7 @@ public class TodoWriteTool implements Tool {
 
 		List<TodoItem> nextTodos = new ArrayList<>();
 		for (int i = 0; i < todos.size(); i++) {
+			// 模型每次传入完整列表，工具用它替换当前内存状态。
 			JSONObject item = todos.getJSONObject(i);
 			if (item == null) {
 				return new ToolResult("Error: todos[" + i + "] must be an object");
@@ -60,6 +95,7 @@ public class TodoWriteTool implements Tool {
 				return new ToolResult("Error: todos[" + i + "] missing content");
 			}
 			if (!Arrays.asList("pending", "in_progress", "completed").contains(status)) {
+				// 教学版只允许三种状态，避免 todo 状态变成开放文本。
 				return new ToolResult("Error: todos[" + i + "] has invalid status: " + status);
 			}
 			nextTodos.add(new TodoItem(content, status));
