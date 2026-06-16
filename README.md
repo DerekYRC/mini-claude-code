@@ -28,6 +28,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s06 Subagent
 - s07 Skill Loading
 - s08 Context Compact
+- s09 Memory
 
 ## 分支学习
 
@@ -41,6 +42,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s06-subagent`
 - `s07-skill-loading`
 - `s08-context-compact`
+- `s09-memory`
 
 切换示例：
 
@@ -179,6 +181,23 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s08.S08Context
 3. 反复对话 20 轮以上，观察是否出现 `[auto compact]` 或 `[reactive compact]`
 
 观察重点：每次工具执行后，旧 `tool_result` 是否被压缩；连续对话超过阈值时，是否保存 `.transcripts/` 并触发摘要。
+
+## 运行 s09
+
+s09 加入文件系统记忆：`MEMORY.md` 索引常驻 system prompt，相关记忆正文按需注入，每轮结束后提取新记忆。
+
+```sh
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s09.S09MemoryDemo
+```
+
+试试这些 prompt（分多轮输入，观察记忆的累积和加载）：
+
+1. `我喜欢使用 tabs 缩进，而不是 spaces。请记住这一点。`
+2. `创建一个名为 test.py 的 Python 文件`
+3. `我之前告诉过你哪些偏好？`
+4. `我还喜欢字符串使用单引号，而不是双引号。`
+
+观察重点：每轮结束后是否出现 `[Memory: extracted N new memories]`；`.memory/` 目录下是否生成 `.md` 文件；`MEMORY.md` 索引是否更新；新一轮对话时 Agent 是否自动加载了之前的记忆。
 
 ## 参考项目
 
