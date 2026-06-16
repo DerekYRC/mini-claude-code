@@ -20,6 +20,19 @@ public class LoadSkillTool implements Tool {
 	}
 
 	@Override
+	/*
+	 * {
+	 *   "name": "load_skill",
+	 *   "description": "Load specialized knowledge by name.",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "name": {"type": "string", "description": "Skill name to load"}
+	 *     },
+	 *     "required": ["name"]
+	 *   }
+	 * }
+	 */
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()
 				.fluentPut("name", new JSONObject()
