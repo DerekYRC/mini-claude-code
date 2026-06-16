@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
+/**
+ * 精确替换文件中文本的工具。
+ */
 public class EditFileTool implements Tool {
 
 	private final PathGuard pathGuard;
@@ -16,6 +19,21 @@ public class EditFileTool implements Tool {
 		this.pathGuard = new PathGuard(workdir);
 	}
 
+	/*
+	 * {
+	 *   "name": "edit_file",
+	 *   "description": "Replace exact text in a file once",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "path": {"type": "string", "description": "File path relative to the workdir"},
+	 *       "old_text": {"type": "string", "description": "Exact text to replace once"},
+	 *       "new_text": {"type": "string", "description": "Replacement text"}
+	 *     },
+	 *     "required": ["path", "old_text", "new_text"]
+	 *   }
+	 * }
+	 */
 	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()
@@ -53,6 +71,7 @@ public class EditFileTool implements Tool {
 			if (!text.contains(oldText)) {
 				return new ToolResult("Error: text not found in " + path);
 			}
+			// 只替换第一次精确匹配，保持教学工具行为简单且可预测。
 			Files.writeString(target.toPath(), text.replaceFirst(java.util.regex.Pattern.quote(oldText),
 					java.util.regex.Matcher.quoteReplacement(newText)), StandardCharsets.UTF_8);
 			return new ToolResult("Edited " + path);
