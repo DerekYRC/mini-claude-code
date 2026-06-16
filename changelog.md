@@ -14,6 +14,7 @@
 - s06 Subagent：大任务拆小，每个小任务干净的上下文，分支 `s06-subagent`
 - s07 Skill Loading：用到时再加载，别全塞 prompt 里，分支 `s07-skill-loading`
 - s08 Context Compact：上下文总会满，要有办法腾地方，分支 `s08-context-compact`
+- s09 Memory：记住该记的，忘掉该忘的，分支 `s09-memory`
 
 ## s01：One loop & Bash is all you need
 
@@ -706,3 +707,113 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s08.S08Context
 ```
 
 预期控制台出现 `Tool> compact ...`、`[transcript saved: ...]` 和 `[Compacted. History summarized.]`。
+
+## s09：记住该记的，忘掉该忘的
+
+**教学分支：** `s09-memory`
+
+s09 解决的问题是：Agent 不能把所有历史都塞进上下文，但也不能忘掉稳定偏好、项目事实和用户反馈。最小解法是把记忆存成文件，用索引常驻 prompt，用正文按需注入。
+
+本章新增：
+
+- `Memory`：普通 Java 数据类，保存文件名、名称、描述、类型和正文。
+- `MemoryStore`：管理 `.memory/*.md` 和 `.memory/MEMORY.md` 索引。
+- `MemorySelector`：根据当前对话选择最多 5 条相关记忆，LLM 选择失败时用关键词降级。
+- `MemoryExtractor`：每轮结束后从近期对话提取用户偏好、约束、项目事实或引用。
+- `MemoryConsolidator`：记忆文件达到阈值后合并去重。
+- `MemoryManager`：组合筛选、提取、整理三个子系统。
+- `MemoryAgentLoop`：包住 s08 的压缩循环，在停止后触发记忆提取。
+- `S09MemoryDemo`：注册 `bash/read_file/write_file/edit_file/glob/task`，并在每轮开始重建带记忆索引的 system prompt。
+
+### 三个子系统
+
+s09 的记忆系统拆成三块：
+
+```text
+筛选：根据当前请求，从 MEMORY.md 索引中选择相关记忆文件
+提取：每轮结束后，从压缩前上下文提取新记忆
+整理：文件数量达到阈值后，合并重复或过期记忆
+```
+
+`MEMORY.md` 只是一份便宜索引，格式类似：
+
+```markdown
+- [user-preference-tabs](user-preference-tabs.md) - User prefers tabs for indentation
+```
+
+完整正文仍保存在独立 Markdown 文件里：
+
+```markdown
+---
+name: user-preference-tabs
+description: User prefers tabs for indentation
+type: user
+---
+
+User prefers using tabs, not spaces, for indentation.
+```
+
+这样每轮 system prompt 只带索引，真正相关时才把正文包进 `<relevant_memories>`。这和 s07 的技能加载思路相同：先列目录，用到时再展开。
+
+### 循环位置
+
+本章复用 s08 的 `CompactingAgentLoop`，但在外层新增 `MemoryAgentLoop`：
+
+```text
+用户输入
+  -> 注入相关记忆
+  -> 保存压缩前快照
+  -> 运行 s08 压缩循环
+  -> 本轮结束后提取记忆
+```
+
+提取使用压缩前快照，是因为摘要可能抹掉用户偏好和反馈里的细节。教学版没有实现后台 Dream、锁和时间门控，整理只用“文件数量达到 10”这个简单阈值，便于直接观察。
+
+### 验证
+
+启动命令：
+
+```sh
+git switch s09-memory
+
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s09.S09MemoryDemo
+```
+
+真实 API smoke test：
+
+试试这些 prompt（分多轮输入，观察记忆的累积和加载）：
+
+1. `我喜欢使用 tabs 缩进，而不是 spaces。请记住这一点。`
+2. `创建一个名为 test.py 的 Python 文件`
+3. `我之前告诉过你哪些偏好？`
+4. `我还喜欢字符串使用单引号，而不是双引号。`
+
+预期观察：
+
+- 第一轮结束后出现 `[Memory: extracted N new memories]`。
+- `.memory/` 目录下生成独立记忆文件。
+- `.memory/MEMORY.md` 包含偏好索引。
+- 后续对话会自动加载相关记忆，并在回答或写文件时体现偏好。
+
+本次自动验证使用更短的两轮 prompt：
+
+```text
+请记住：我喜欢 Java demo 使用 tabs 缩进。只回答已记录。
+我之前说过什么 Java demo 偏好？请根据记忆回答。
+```
+
+预期控制台出现 `[Memory: extracted ...]`，第二轮回答提到 `Java demo` 和 `tabs`。
+
+### 源码注释补充
+
+本章为核心源码补充了中文注释，重点解释为什么索引常驻 prompt、为什么正文按需注入，以及为什么提取要使用压缩前快照。
+
+### 提示词位置调整
+
+本章将父 Agent 和子 Agent 的 system prompt 分别作为 `S09MemoryDemo` 顶部的 `SYSTEM_PROMPT_TEMPLATE` 与 `SUBAGENT_SYSTEM_PROMPT` 静态变量。
+
+父 Agent 的提示词对齐参考实现：说明当前工作目录、可用记忆索引、相关记忆会被注入下方，以及遇到明确偏好或 remember 请求时应提取为记忆。
