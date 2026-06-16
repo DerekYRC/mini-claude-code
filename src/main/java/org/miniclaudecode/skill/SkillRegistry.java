@@ -9,6 +9,12 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * 技能目录。
+ *
+ * 启动时只把 name/description 这类便宜信息放进 system prompt，
+ * 真正的 SKILL.md 正文等模型调用 load_skill 时再加载。
+ */
 public class SkillRegistry {
 
 	private final Map<String, Skill> skills = new LinkedHashMap<>();
@@ -34,6 +40,7 @@ public class SkillRegistry {
 			if (builder.length() > 0) {
 				builder.append("\n");
 			}
+			// 目录里只放技能名和一句说明，避免把所有技能正文一次性塞进上下文。
 			builder.append("  - ")
 					.append(skill.getName())
 					.append(": ")
@@ -54,6 +61,7 @@ public class SkillRegistry {
 				continue;
 			}
 			try {
+				// 这里会读出完整文件，但只把目录信息注入 prompt；正文保存在 registry 里按需取用。
 				String raw = Files.readString(skillFile.toPath(), StandardCharsets.UTF_8);
 				Skill skill = parse(dir.getName(), raw);
 				skills.put(skill.getName(), skill);
@@ -71,6 +79,7 @@ public class SkillRegistry {
 		if (raw.startsWith("---")) {
 			String[] parts = raw.split("---", 3);
 			if (parts.length >= 3) {
+				// frontmatter 的 name/description 是技能目录，正文 body 才是 load_skill 返回的内容。
 				String[] lines = parts[1].split("\\R");
 				for (String line : lines) {
 					if (line.startsWith("name:")) {
