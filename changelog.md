@@ -314,8 +314,8 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 真实 API smoke test：
 
-- prompt：`请调用 bash 工具执行：printf s04-hook-ok。然后只回答工具输出。`
-- 预期观察：控制台出现 `[HOOK] UserPromptSubmit`、`[HOOK] PreToolUse: bash ...`、工具输出 `s04-hook-ok`、以及 `[HOOK] Stop: session used 1 tool calls`。
+- prompt：`执行命令printf hello-world`
+- 预期观察：控制台出现 `[HOOK] UserPromptSubmit`、`[HOOK] PreToolUse: bash ...`、工具输出 `hello-world`、以及 `[HOOK] Stop: session used 1 tool calls`。
 
 ### 源码注释补充
 
