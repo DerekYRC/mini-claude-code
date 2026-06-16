@@ -24,13 +24,16 @@ import java.util.Scanner;
 
 public class S02ToolDispatchDemo {
 
+	// 我把提示词放在 demo 顶部，方便读者直接对照本章的多工具使用约束。
+	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
+			+ ". Use tools to solve tasks. Act, don't explain.";
+
 	public static void main(String[] args) {
 		AnthropicConfig config = new AnthropicConfig();
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
-		config.setSystemPrompt("You are a coding agent at " + System.getProperty("user.dir")
-				+ ". Use tools to solve tasks. Act, don't explain.");
+		config.setSystemPrompt(SYSTEM_PROMPT);
 
 		File workdir = new File(".");
 		ToolRegistry registry = new ToolRegistry()
