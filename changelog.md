@@ -250,7 +250,7 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 真实 API smoke test：
 
-- prompt：`请调用 bash 工具执行：chmod 777 target/s02-demo.txt。出现 Allow? 时等待我的输入。`
+- prompt：`请调用 bash 工具执行：chmod 777 changelog.md`
 - 输入确认：输入 `n`
 - 预期观察：控制台出现 `Permission> Potentially destructive command` 和 `Allow? [y/N]`，拒绝后工具不会执行，模型收到 `Permission denied by user...`。
 
