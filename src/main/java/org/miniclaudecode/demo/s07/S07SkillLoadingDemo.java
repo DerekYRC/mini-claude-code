@@ -24,6 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * s07 启动入口：system prompt 只放技能目录，正文通过 load_skill 按需加载。
+ */
 public class S07SkillLoadingDemo {
 
 	public static void main(String[] args) {
@@ -34,10 +37,12 @@ public class S07SkillLoadingDemo {
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
+		// prompt 里只放技能目录，避免一启动就把所有 SKILL.md 正文消耗掉上下文。
 		config.setSystemPrompt("You are a coding agent at " + System.getProperty("user.dir") + ".\n"
 				+ "Use load_skill to access specialized knowledge before tackling unfamiliar topics.\n\n"
 				+ "Skills available:\n" + skillRegistry.getDescriptions());
 
+		// 本章刻意不注册 s06 的 task 工具，让读者只关注“技能按需加载”这一件事。
 		ToolRegistry registry = new ToolRegistry()
 				.register(new BashTool(workdir))
 				.register(new ReadFileTool(workdir))
