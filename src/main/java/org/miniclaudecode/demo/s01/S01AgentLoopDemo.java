@@ -29,6 +29,9 @@ public class S01AgentLoopDemo {
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
+		// s01 的提示词直接放在 demo，读者打开入口类就能看到模型被要求如何使用 bash。
+		config.setSystemPrompt("You are a coding agent at " + System.getProperty("user.dir")
+				+ ". Use bash to solve tasks. Act, don't explain.");
 		AnthropicLlmClient llmClient = new AnthropicLlmClient(config);
 
 		// s01 只有一个工具，先让读者把“工具闭环”看清楚。
