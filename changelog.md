@@ -363,6 +363,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s04.S04HooksDe
 
 同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
 
+### 提示词位置调整
+
+本章将 system prompt 作为 `S04HooksDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词内容保持参考项目的工具使用约束。
+
+`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
+
 ## s05：没有计划的 agent 走哪算哪
 
 **教学分支：** `s05-todo`
