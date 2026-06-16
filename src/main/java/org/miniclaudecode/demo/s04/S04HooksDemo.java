@@ -31,12 +31,17 @@ import java.util.Scanner;
  */
 public class S04HooksDemo {
 
+	// system prompt 放在 demo 顶部，便于对照本章 hook 扩展点。
+	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
+			+ ". Use tools to solve tasks. Act, don't explain.";
+
 	public static void main(String[] args) {
 		Scanner scanner = new Scanner(System.in);
 		AnthropicConfig config = new AnthropicConfig();
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
+		config.setSystemPrompt(SYSTEM_PROMPT);
 
 		File workdir = new File(".");
 		ToolRegistry registry = new ToolRegistry()
@@ -79,7 +84,7 @@ public class S04HooksDemo {
 
 	private static HookManager hooks(File workdir, Scanner scanner) {
 		HookManager hooks = new HookManager();
-		// demo 故意把 hook 写在入口类里，方便读者直接看到扩展点挂在哪里。
+		// hook 写在入口类里，保持扩展点和触发位置相邻。
 		hooks.register(HookEvent.USER_PROMPT_SUBMIT, context -> {
 			System.out.println("[HOOK] UserPromptSubmit: working in " + workdir.getAbsolutePath());
 			return HookDecision.pass();
