@@ -115,6 +115,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s01.S01AgentLo
 
 当前分支已不包含 `AnthropicConfig.timeoutMillis`。
 
+### 提示词位置调整
+
+本章已把 system prompt 从 `AnthropicConfig` 移到 `S01AgentLoopDemo`，让读者打开章节入口类就能看到模型的工作目录和 bash 使用约束。
+
+`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
+
 ## s02：加一个工具，只加一个 handler
 
 **教学分支：** `s02-tool-dispatch`
