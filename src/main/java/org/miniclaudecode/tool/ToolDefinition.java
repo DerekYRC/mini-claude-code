@@ -2,6 +2,9 @@ package org.miniclaudecode.tool;
 
 import com.alibaba.fastjson.JSONObject;
 
+/**
+ * 暴露给模型的工具定义，对应 Anthropic Messages 的 tools 数组。
+ */
 public class ToolDefinition {
 
 	private String name;

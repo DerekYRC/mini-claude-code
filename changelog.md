@@ -102,3 +102,9 @@ mvn package -DskipTests
 - 模型调用 `bash` 创建文件，例如写入 `print("hello world")`。
 - 控制台出现 `Tool> bash ...` 和 `ToolResult> exit_code=0`。
 - 运行 `python3 hello.py` 时输出 `hello world`。
+
+### 源码注释补充
+
+本章为核心源码补充了中文注释，重点解释 Agent 循环、bash 工具、Anthropic Messages 请求/响应转换，以及真实 API 返回 thinking/unknown content block 时为什么要保留这些结构。
+
+当前分支已不包含 `AnthropicConfig.timeoutMillis`。

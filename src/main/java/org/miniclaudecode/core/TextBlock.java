@@ -1,5 +1,8 @@
 package org.miniclaudecode.core;
 
+/**
+ * 普通文本 content block。
+ */
 public class TextBlock extends ContentBlock {
 
 	private String text;

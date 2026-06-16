@@ -1,5 +1,8 @@
 package org.miniclaudecode.core;
 
+/**
+ * 工具执行结果 block，toolUseId 对应模型上一轮返回的 tool_use id。
+ */
 public class ToolResultBlock extends ContentBlock {
 
 	private String toolUseId;
