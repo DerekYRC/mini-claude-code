@@ -154,11 +154,13 @@ s07 启动时扫描 `skills/*/SKILL.md`，只把技能名和一句描述放进 s
 mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s07.S07SkillLoadingDemo
 ```
 
-可以试这个输入，观察是否出现 `Tool> load_skill`：
+试试这些 prompt：
 
-```text
-请调用 load_skill 加载 code-review 技能，然后只回答这个技能的 name 和第一句说明。
-```
+1. `有哪些技能可用？`
+2. `加载 code-review 技能，并遵循它的说明`
+3. `我需要做一次代码审查，请先加载相关技能`
+
+观察重点：Agent 是否直接从 system prompt 里的目录知道有哪些技能；需要完整规范时是否出现 `Tool> load_skill`；加载后回答是否使用了对应 skill 的说明。
 
 ## 参考项目
 

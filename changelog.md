@@ -594,8 +594,17 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s07.S07SkillLo
 
 真实 API smoke test：
 
-- prompt：`请调用 load_skill 加载 code-review 技能，然后只回答这个技能的 name 和第一句说明。`
-- 预期观察：控制台出现 `Tool> load_skill {"name":"code-review"}`，工具结果以 `<skill name="code-review">` 开头，并包含 `# Code Review Skill`。
+试试这些 prompt：
+
+1. `有哪些技能可用？`
+2. `加载 code-review 技能，并遵循它的说明`
+3. `我需要做一次代码审查，请先加载相关技能`
+
+预期观察：
+
+- Agent 可以先从 system prompt 中的技能目录知道有哪些技能。
+- 需要完整规范时会出现 `Tool> load_skill ...`。
+- 加载后，工具结果以 `<skill name="code-review">` 开头，回答会使用对应 skill 的说明。
 
 ### 源码注释补充
 
