@@ -221,8 +221,8 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s02.S02ToolDis
 
 真实 API smoke test：
 
-- prompt：`请依次使用 write_file、edit_file、read_file、glob 工具：先写入 target/s02-demo.txt，内容为 old hello；再把 old 替换为 new；然后读取文件内容；最后用 glob 查找 target/s02-*.txt，并回答最终文件内容和匹配结果。`
-- 预期观察：控制台出现 `Tool> write_file ...`、`Tool> edit_file ...`、`Tool> read_file ...`、`Tool> glob ...`，最终回答包含 `new hello` 和 `target/s02-demo.txt`。
+- prompt：`请依次使用 write_file、edit_file、read_file、glob 工具：先写入s02-demo.txt，内容为 old hello；再把 old 替换为 new；然后读取文件内容；最后用 glob 查找s02-*.txt，并回答最终文件内容和匹配结果。`
+- 预期观察：控制台出现 `Tool> write_file ...`、`Tool> edit_file ...`、`Tool> read_file ...`、`Tool> glob ...`，最终回答包含 `new hello` 和 `s02-demo.txt`。
 
 ### 源码注释补充
 
