@@ -72,11 +72,14 @@ s02 在 s01 基础上加入 `ToolRegistry`，并注册 `bash/read_file/write_fil
 mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s02.S02ToolDispatchDemo
 ```
 
-可以试这个输入，观察是否出现 `Tool> write_file`、`Tool> edit_file`、`Tool> read_file` 和 `Tool> glob`：
+试试这些 prompt：
 
-```text
-请依次使用 write_file、edit_file、read_file、glob 工具：先写入 target/s02-demo.txt，内容为 old hello；再把 old 替换为 new；然后读取文件内容；最后用 glob 查找 target/s02-*.txt，并回答最终文件内容和匹配结果。
-```
+1. `读取 README.md，并告诉我这个项目是做什么的`
+2. `创建一个名为 test.py 的文件，内容是打印 "hello"，然后再读取它确认内容`
+3. `查找当前目录中的所有 Java 文件`
+4. `同时读取 README.md 和 pom.xml，然后创建一个 summary.md 总结文件`
+
+观察重点：模型什么时候只调一个工具，什么时候一次调多个工具；多个工具调用的顺序和结果是否正确。
 
 ## 运行 s03
 

@@ -218,8 +218,18 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s02.S02ToolDis
 
 真实 API smoke test：
 
-- prompt：`请依次使用 write_file、edit_file、read_file、glob 工具：先写入s02-demo.txt，内容为 old hello；再把 old 替换为 new；然后读取文件内容；最后用 glob 查找s02-*.txt，并回答最终文件内容和匹配结果。`
-- 预期观察：控制台出现 `Tool> write_file ...`、`Tool> edit_file ...`、`Tool> read_file ...`、`Tool> glob ...`，最终回答包含 `new hello` 和 `s02-demo.txt`。
+试试这些 prompt：
+
+1. `读取 README.md，并告诉我这个项目是做什么的`
+2. `创建一个名为 test.py 的文件，内容是打印 "hello"，然后再读取它确认内容`
+3. `查找当前目录中的所有 Java 文件`
+4. `同时读取 README.md 和 pom.xml，然后创建一个 summary.md 总结文件`
+
+预期观察：
+
+- 简单读取通常出现 `Tool> read_file ...`。
+- 创建并回读文件会连续出现 `Tool> write_file ...` 和 `Tool> read_file ...`。
+- 查找文件会出现 `Tool> glob ...`，多文件总结可能一次触发多个工具调用。
 
 ### 源码注释补充
 
