@@ -52,6 +52,7 @@ public class AgentLoop {
 			// assistant 消息必须写回 history，否则下一轮模型不知道自己刚才请求了哪个工具。
 			messages.add(Message.assistant(response.getContent()));
 
+			// 调用工具函数
 			List<ToolResultBlock> toolResults = executeToolUses(response);
 			if (!"tool_use".equals(response.getStopReason()) || toolResults.isEmpty()) {
 				listener.onStop(response);
