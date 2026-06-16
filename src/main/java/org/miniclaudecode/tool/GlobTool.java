@@ -12,6 +12,9 @@ import java.nio.file.PathMatcher;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 在 workdir 内按 glob pattern 查找文件的工具。
+ */
 public class GlobTool implements Tool {
 
 	private final File workdir;
@@ -20,6 +23,19 @@ public class GlobTool implements Tool {
 		this.workdir = workdir;
 	}
 
+	/*
+	 * {
+	 *   "name": "glob",
+	 *   "description": "Find files matching a glob pattern in the workdir",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "pattern": {"type": "string", "description": "Glob pattern relative to the workdir"}
+	 *     },
+	 *     "required": ["pattern"]
+	 *   }
+	 * }
+	 */
 	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()
@@ -45,6 +61,7 @@ public class GlobTool implements Tool {
 			PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
 			List<String> matches = new ArrayList<>();
 			try (java.util.stream.Stream<Path> paths = Files.walk(root)) {
+				// glob 只负责列出匹配文件，不读取文件内容；读取交给 read_file。
 				paths.filter(Files::isRegularFile)
 						.map(root::relativize)
 						.filter(matcher::matches)

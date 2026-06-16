@@ -19,6 +19,34 @@ public class TodoWriteTool implements Tool {
 	private final List<TodoItem> currentTodos = new ArrayList<>();
 
 	@Override
+	/*
+	 * {
+	 *   "name": "todo_write",
+	 *   "description": "Create or replace the current task list",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "todos": {
+	 *         "type": "array",
+	 *         "items": {
+	 *           "type": "object",
+	 *           "properties": {
+	 *             "content": {"type": "string", "description": "Task content"},
+	 *             "status": {
+	 *               "type": "string",
+	 *               "enum": ["pending", "in_progress", "completed"],
+	 *               "description": "Task status"
+	 *             }
+	 *           },
+	 *           "required": ["content", "status"]
+	 *         },
+	 *         "description": "Full current todo list"
+	 *       }
+	 *     },
+	 *     "required": ["todos"]
+	 *   }
+	 * }
+	 */
 	public ToolDefinition getDefinition() {
 		JSONObject todoProperties = new JSONObject()
 				.fluentPut("content", new JSONObject()
