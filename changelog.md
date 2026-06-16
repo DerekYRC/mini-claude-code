@@ -230,6 +230,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s02.S02ToolDis
 
 同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
 
+### 提示词位置调整
+
+本章将 system prompt 作为 `S02ToolDispatchDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，方便读者先看到模型被要求使用工具池解决任务。
+
+`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
+
 ## s03：先划边界，再给自由
 
 **教学分支：** `s03-permission`

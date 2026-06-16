@@ -27,13 +27,16 @@ import java.util.Scanner;
  */
 public class S02ToolDispatchDemo {
 
+	// 本章提示词放在 demo 顶部，读者能直接看到“多工具 Agent”给模型的使用约束。
+	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
+			+ ". Use tools to solve tasks. Act, don't explain.";
+
 	public static void main(String[] args) {
 		AnthropicConfig config = new AnthropicConfig();
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
-		config.setSystemPrompt("You are a coding agent at " + System.getProperty("user.dir")
-				+ ". Use tools to solve tasks. Act, don't explain.");
+		config.setSystemPrompt(SYSTEM_PROMPT);
 
 		File workdir = new File(".");
 		// s02 的新增点在这里：工具被注册进 dispatch map，AgentLoop 不需要知道具体工具类。
