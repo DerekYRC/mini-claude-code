@@ -19,6 +19,20 @@ public class WriteFileTool implements Tool {
 		this.pathGuard = new PathGuard(workdir);
 	}
 
+	/*
+	 * {
+	 *   "name": "write_file",
+	 *   "description": "Write content to a UTF-8 file in the workdir",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "path": {"type": "string", "description": "File path relative to the workdir"},
+	 *       "content": {"type": "string", "description": "Content to write"}
+	 *     },
+	 *     "required": ["path", "content"]
+	 *   }
+	 * }
+	 */
 	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()

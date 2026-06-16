@@ -23,6 +23,19 @@ public class GlobTool implements Tool {
 		this.workdir = workdir;
 	}
 
+	/*
+	 * {
+	 *   "name": "glob",
+	 *   "description": "Find files matching a glob pattern in the workdir",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "pattern": {"type": "string", "description": "Glob pattern relative to the workdir"}
+	 *     },
+	 *     "required": ["pattern"]
+	 *   }
+	 * }
+	 */
 	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()

@@ -24,6 +24,20 @@ public class ReadFileTool implements Tool {
 		this.pathGuard = new PathGuard(workdir);
 	}
 
+	/*
+	 * {
+	 *   "name": "read_file",
+	 *   "description": "Read a UTF-8 text file from the workdir",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "path": {"type": "string", "description": "File path relative to the workdir"},
+	 *       "limit": {"type": "integer", "description": "Optional max number of lines to return"}
+	 *     },
+	 *     "required": ["path"]
+	 *   }
+	 * }
+	 */
 	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()

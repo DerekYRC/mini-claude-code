@@ -19,6 +19,21 @@ public class EditFileTool implements Tool {
 		this.pathGuard = new PathGuard(workdir);
 	}
 
+	/*
+	 * {
+	 *   "name": "edit_file",
+	 *   "description": "Replace exact text in a file once",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "path": {"type": "string", "description": "File path relative to the workdir"},
+	 *       "old_text": {"type": "string", "description": "Exact text to replace once"},
+	 *       "new_text": {"type": "string", "description": "Replacement text"}
+	 *     },
+	 *     "required": ["path", "old_text", "new_text"]
+	 *   }
+	 * }
+	 */
 	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()

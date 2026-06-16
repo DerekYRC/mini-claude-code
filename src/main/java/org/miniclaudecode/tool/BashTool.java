@@ -9,6 +9,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * s01 唯一真实工具：执行 shell 命令。
+ *
+ * 本章故意不做权限判断，只保留“模型请求工具 -> Java 执行工具 -> 结果回给模型”的闭环。
+ */
 public class BashTool implements Tool {
 
 	private final File workdir;
@@ -17,6 +22,19 @@ public class BashTool implements Tool {
 		this.workdir = workdir;
 	}
 
+	/*
+	 * {
+	 *   "name": "bash",
+	 *   "description": "Run a shell command and return stdout/stderr",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "command": {"type": "string", "description": "Shell command to run"}
+	 *     },
+	 *     "required": ["command"]
+	 *   }
+	 * }
+	 */
 	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()
@@ -38,6 +56,7 @@ public class BashTool implements Tool {
 		}
 
 		try {
+			// bash 工具的工作目录和 system prompt 中告诉模型的 workdir 保持一致。
 			Process process = new ProcessBuilder("/bin/sh", "-c", command)
 					.directory(workdir)
 					.redirectErrorStream(true)
