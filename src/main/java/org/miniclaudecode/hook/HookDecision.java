@@ -1,5 +1,10 @@
 package org.miniclaudecode.hook;
 
+/**
+ * Hook 的返回值。
+ *
+ * 只有 PRE_TOOL_USE 阶段的 block 会阻止工具执行，其他阶段主要用于观察和记录。
+ */
 public class HookDecision {
 
 	private boolean blocked;

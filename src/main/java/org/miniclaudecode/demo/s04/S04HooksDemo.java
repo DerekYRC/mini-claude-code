@@ -92,14 +92,12 @@ public class S04HooksDemo {
 		hooks.register(HookEvent.PRE_TOOL_USE, context -> permissionHook(context, scanner));
 		hooks.register(HookEvent.PRE_TOOL_USE, context -> {
 			ToolUseBlock toolUse = context.getToolUse();
-			System.out.println("[HOOK] PreToolUse: " + toolUse.getName() + " " + toolUse.getInput());
+			System.out.println("[HOOK] PreToolUse: " + toolUse.getName() + ", input: " + toolUse.getInput());
 			return HookDecision.pass();
 		});
 		hooks.register(HookEvent.POST_TOOL_USE, context -> {
 			String content = context.getToolResult() == null ? "" : context.getToolResult().getContent();
-			if (content != null && content.length() > 100000) {
-				System.out.println("[HOOK] PostToolUse: large output from " + context.getToolUse().getName());
-			}
+			System.out.println("[HOOK] PostToolUse: " + context.getToolUse().getName()+", output: "+content);
 			return HookDecision.pass();
 		});
 		hooks.register(HookEvent.STOP, context -> {
