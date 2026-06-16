@@ -527,8 +527,17 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s06.S06Subagen
 
 真实 API smoke test：
 
-- prompt：`请调用 task 工具，description 参数必须完整写成：请调用 bash 工具执行命令 printf s06-subagent-ok，然后返回这个命令的输出。父 Agent 最后只回答子 Agent 摘要。`
-- 预期观察：控制台出现 `Tool> task ...`、`[Subagent spawned]`、`[sub] Tool> bash ...` 和 `s06-subagent-ok`。
+试试这些 prompt：
+
+1. `使用一个子任务找出这个项目使用什么构建工具和测试框架`
+2. `委托子 Agent 读取 src/main/java/org/miniclaudecode/core 下的 Java 文件，并总结每个文件的作用`
+3. `用 task 创建 target/s06-example/string_tools.py，里面包含 slugify(text: str) 函数，然后由父 Agent 验证它`
+
+预期观察：
+
+- 父 Agent 调用 `Tool> task ...` 后出现 `[Subagent spawned]` / `[Subagent done]`。
+- 子 Agent 的工具调用以 `[sub] Tool> ...` 输出。
+- 父 Agent 不接收子 Agent 的完整过程，只继续处理子 Agent 返回的最终摘要。
 
 ### 源码注释补充
 
