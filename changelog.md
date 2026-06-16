@@ -502,6 +502,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s06.S06Subagen
 
 同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
 
+### 提示词位置调整
+
+本章将父 Agent 和子 Agent 的 system prompt 分别作为 `PARENT_SYSTEM_PROMPT` 与 `SUBAGENT_SYSTEM_PROMPT` 静态变量，提示词内容保持参考项目的委托边界。
+
+`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
+
 ## s07：用到时再加载，别全塞 prompt 里
 
 **教学分支：** `s07-skill-loading`
