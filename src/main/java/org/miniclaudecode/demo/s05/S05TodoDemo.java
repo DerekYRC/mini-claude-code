@@ -28,7 +28,7 @@ import java.util.Scanner;
  */
 public class S05TodoDemo {
 
-	// system prompt 放在 demo 顶部，便于对照 todo_write 的计划约束。
+	// 加上将复杂任务进行分解的提示词
 	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
 			+ ". Before starting any multi-step task, use todo_write to plan your steps. "
 			+ "Keep exactly one task in_progress while working. Mark tasks completed as you finish. "
