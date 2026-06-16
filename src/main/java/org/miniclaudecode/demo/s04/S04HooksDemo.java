@@ -26,7 +26,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * s04 启动入口：把权限、日志、输出检查和停止统计都注册成 hook。
+ */
 public class S04HooksDemo {
+
+	// system prompt 放在 demo 顶部，便于对照本章 hook 扩展点。
+	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
+			+ ". Use tools to solve tasks. Act, don't explain.";
 
 	public static void main(String[] args) {
 		Scanner scanner = new Scanner(System.in);
@@ -34,6 +41,7 @@ public class S04HooksDemo {
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
+		config.setSystemPrompt(SYSTEM_PROMPT);
 
 		File workdir = new File(".");
 		ToolRegistry registry = new ToolRegistry()
@@ -76,6 +84,7 @@ public class S04HooksDemo {
 
 	private static HookManager hooks(File workdir, Scanner scanner) {
 		HookManager hooks = new HookManager();
+		// hook 写在入口类里，保持扩展点和触发位置相邻。
 		hooks.register(HookEvent.USER_PROMPT_SUBMIT, context -> {
 			System.out.println("[HOOK] UserPromptSubmit: working in " + workdir.getAbsolutePath());
 			return HookDecision.pass();
@@ -132,6 +141,7 @@ public class S04HooksDemo {
 	}
 
 	private static void triggerUserPromptHook(HookManager hookManager, String query) {
+		// UserPromptSubmit 不在 AgentLoop 内触发，因为本章让 demo 负责接收用户输入。
 		HookContext context = new HookContext(HookEvent.USER_PROMPT_SUBMIT);
 		context.setUserPrompt(query);
 		hookManager.trigger(HookEvent.USER_PROMPT_SUBMIT, context);

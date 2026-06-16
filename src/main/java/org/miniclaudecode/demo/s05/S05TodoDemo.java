@@ -28,16 +28,18 @@ import java.util.Scanner;
  */
 public class S05TodoDemo {
 
+	// system prompt 放在 demo 顶部，便于对照 todo_write 的计划约束。
+	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
+			+ ". Before starting any multi-step task, use todo_write to plan your steps. "
+			+ "Keep exactly one task in_progress while working. Mark tasks completed as you finish. "
+			+ "Act, don't explain.";
+
 	public static void main(String[] args) {
 		AnthropicConfig config = new AnthropicConfig();
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
-		// prompt 约束模型在多步骤任务前先调用 todo_write，而不是改 AgentLoop。
-		config.setSystemPrompt("You are a coding agent at " + System.getProperty("user.dir")
-				+ ". Before starting any multi-step task, use todo_write to plan your steps. "
-				+ "Keep exactly one task in_progress while working. Mark tasks completed as you finish. "
-				+ "Act, don't explain.");
+		config.setSystemPrompt(SYSTEM_PROMPT);
 
 		File workdir = new File(".");
 		ToolRegistry registry = new ToolRegistry()
