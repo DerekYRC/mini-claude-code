@@ -370,8 +370,17 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s04.S04HooksDe
 
 真实 API smoke test：
 
-- prompt：`执行命令printf hello-world`
-- 预期观察：控制台出现 `[HOOK] UserPromptSubmit`、`[HOOK] PreToolUse: bash ...`、工具输出 `hello-world`、以及 `[HOOK] Stop: session used 1 tool calls`。
+试试这些 prompt：
+
+1. `读取 README.md`
+2. `创建一个名为 test.txt 的文件`
+3. `删除 /tmp 目录中的所有临时文件`
+
+预期观察：
+
+- 每次工具执行前会出现 `[HOOK]` 日志。
+- 普通读写通过后会触发 `PostToolUse`。
+- 危险命令会被权限 hook 拦截，主循环本身不写死权限规则。
 
 ### 源码注释补充
 
