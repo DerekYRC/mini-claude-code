@@ -10,13 +10,9 @@ public class AnthropicConfig {
 
 	private String model;
 
-	private String systemPrompt = systemPrompt(System.getProperty("user.dir"));
+	private String systemPrompt;
 
 	private int maxTokens = DEFAULT_MAX_TOKENS;
-
-	public static String systemPrompt(String workdir) {
-		return "You are a coding agent at " + workdir + ". Use bash to solve tasks. Act, don't explain.";
-	}
 
 	public String getBaseUrl() {
 		return baseUrl;

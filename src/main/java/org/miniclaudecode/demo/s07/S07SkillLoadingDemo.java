@@ -29,6 +29,10 @@ import java.util.Scanner;
  */
 public class S07SkillLoadingDemo {
 
+	// system prompt 模板只预留技能目录，完整技能正文由 load_skill 按需返回。
+	private static final String SYSTEM_PROMPT_TEMPLATE = "You are a coding agent at " + System.getProperty("user.dir")
+			+ ". Skills available:\n%s\nUse load_skill to get full details when needed.";
+
 	public static void main(String[] args) {
 		File workdir = new File(".");
 		SkillRegistry skillRegistry = new SkillRegistry(new File(workdir, "skills"));
@@ -37,12 +41,9 @@ public class S07SkillLoadingDemo {
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
-		// prompt 里只放技能目录，避免一启动就把所有 SKILL.md 正文消耗掉上下文。
-		config.setSystemPrompt("You are a coding agent at " + System.getProperty("user.dir") + ".\n"
-				+ "Use load_skill to access specialized knowledge before tackling unfamiliar topics.\n\n"
-				+ "Skills available:\n" + skillRegistry.getDescriptions());
+		config.setSystemPrompt(String.format(SYSTEM_PROMPT_TEMPLATE, skillRegistry.getDescriptions()));
 
-		// 本章刻意不注册 s06 的 task 工具，让读者只关注“技能按需加载”这一件事。
+		// 本章不注册 task 工具，只保留技能目录和按需加载正文。
 		ToolRegistry registry = new ToolRegistry()
 				.register(new BashTool(workdir))
 				.register(new ReadFileTool(workdir))
