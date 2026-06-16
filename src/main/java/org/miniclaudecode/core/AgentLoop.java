@@ -19,7 +19,7 @@ import java.util.List;
  * 聚合版 Agent 循环。
  *
  * s01 展示 LLM -> 工具 -> LLM 的闭环，s02 开始把工具查找交给 ToolRegistry；
- * 后续章节继续在这个循环上挂权限、hook 和子 Agent 等能力。
+ * s03 在工具执行前加入 PermissionManager，后续章节继续挂 hook 和子 Agent 等能力。
  */
 public class AgentLoop {
 
@@ -93,7 +93,7 @@ public class AgentLoop {
 
 	public AssistantMessage run(List<Message> messages) {
 		for (int turn = 0; turn < maxTurns; turn++) {
-			// 主循环不关心工具数量，只把当前 history 和工具定义发给模型。
+			// 权限不改变模型调用协议；主循环仍然只把 history 和工具定义发给模型。
 			AssistantMessage response = llmClient.chat(messages, toolDefinitions());
 			listener.onAssistantMessage(response);
 			// assistant 消息写回 history，下一轮模型才能看到自己刚才的 tool_use。
@@ -136,6 +136,7 @@ public class AgentLoop {
 				listener.beforeToolUse(toolUse);
 				PermissionDecision decision = checkPermission(toolUse);
 				if (!decision.isAllowed()) {
+					// 权限拒绝也要回传 tool_result，让模型知道工具为什么没有执行。
 					results.add(new ToolResultBlock(toolUse.getId(), decision.getMessage()));
 					continue;
 				}

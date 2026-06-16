@@ -24,6 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * s03 启动入口：复用 s02 的工具池，并在工具执行前挂上权限管线。
+ */
 public class S03PermissionDemo {
 
 	public static void main(String[] args) {
@@ -42,6 +45,7 @@ public class S03PermissionDemo {
 				.register(new WriteFileTool(workdir))
 				.register(new EditFileTool(workdir))
 				.register(new GlobTool(workdir));
+		// s03 仍复用 s02 工具池，只是在执行前多一道“能不能做”的门。
 		PermissionManager permissionManager = new PermissionManager(workdir, new ConsoleApprovalPrompter(scanner));
 		AgentLoop loop = new AgentLoop(new AnthropicLlmClient(config), registry, new AgentLoopListener() {
 			@Override

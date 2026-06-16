@@ -271,6 +271,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s03.S03Permiss
 - 输入确认：输入 `n`
 - 预期观察：控制台出现 `Permission> Potentially destructive command` 和 `Allow? [y/N]`，拒绝后工具不会执行，模型收到 `Permission denied by user...`。
 
+### 源码注释补充
+
+本章为核心源码补充了中文注释，重点解释本章机制挂载在 Agent 循环中的位置、新增类的职责边界，以及为了保持教学最小化而刻意没有实现的能力。
+
+同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
+
 ## s04：挂在循环上，不写进循环里
 
 **教学分支：** `s04-hooks`

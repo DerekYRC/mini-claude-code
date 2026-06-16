@@ -4,6 +4,9 @@ import org.miniclaudecode.core.ToolUseBlock;
 
 import java.util.Scanner;
 
+/**
+ * 教学版审批器：直接在控制台询问用户，只有 y/yes 才允许执行。
+ */
 public class ConsoleApprovalPrompter implements ApprovalPrompter {
 
 	private final Scanner scanner;
