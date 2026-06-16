@@ -466,6 +466,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s06.S06Subagen
 - prompt：`请调用 task 工具，description 参数必须完整写成：请调用 bash 工具执行命令 printf s06-subagent-ok，然后返回这个命令的输出。父 Agent 最后只回答子 Agent 摘要。`
 - 预期观察：控制台出现 `Tool> task ...`、`[Subagent spawned]`、`[sub] Tool> bash ...` 和 `s06-subagent-ok`。
 
+### 源码注释补充
+
+本章为核心源码补充了中文注释，重点解释本章机制挂载在 Agent 循环中的位置、新增类的职责边界，以及为了保持教学最小化而刻意没有实现的能力。
+
+同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
+
 ## s07：用到时再加载，别全塞 prompt 里
 
 **教学分支：** `s07-skill-loading`

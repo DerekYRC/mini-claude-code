@@ -19,7 +19,8 @@ import java.util.List;
  * 聚合版 Agent 循环。
  *
  * s01 展示 LLM -> 工具 -> LLM 的闭环，s02 开始把工具查找交给 ToolRegistry；
- * s03 在工具执行前加入 PermissionManager，s04 开始在固定位置触发 hook。
+ * s03 在工具执行前加入 PermissionManager，s04 开始在固定位置触发 hook；
+ * s06 新增 maxTurns，让父 Agent 和子 Agent 可以使用不同的循环上限。
  */
 public class AgentLoop {
 
@@ -72,6 +73,7 @@ public class AgentLoop {
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener,
 			int maxTurns) {
+		// 子 Agent 可以使用不同的轮数上限，但默认仍保持 20。
 		this(llmClient, toolRegistry, listener, null, null, maxTurns);
 	}
 
