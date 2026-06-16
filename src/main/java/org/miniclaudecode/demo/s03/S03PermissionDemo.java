@@ -29,7 +29,7 @@ import java.util.Scanner;
  */
 public class S03PermissionDemo {
 
-	// 我在提示词里提醒模型高风险操作要审批；真正的阻止和询问仍由 PermissionManager 执行。
+	// prompt 提醒模型高风险操作要审批；真正的阻止和询问由 PermissionManager 执行。
 	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
 			+ ". All destructive operations require user approval.";
 

@@ -22,9 +22,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * s02 启动入口：把多个工具注册进 ToolRegistry，主循环保持不变。
+ */
 public class S02ToolDispatchDemo {
 
-	// 我把提示词放在 demo 顶部，方便读者直接对照本章的多工具使用约束。
+	// system prompt 放在 demo 顶部，便于对照本章多工具使用约束。
 	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
 			+ ". Use tools to solve tasks. Act, don't explain.";
 
@@ -36,6 +39,7 @@ public class S02ToolDispatchDemo {
 		config.setSystemPrompt(SYSTEM_PROMPT);
 
 		File workdir = new File(".");
+		// s02 的新增点在这里：工具被注册进 dispatch map，AgentLoop 不需要知道具体工具类。
 		ToolRegistry registry = new ToolRegistry()
 				.register(new BashTool(workdir))
 				.register(new ReadFileTool(workdir))
