@@ -92,22 +92,19 @@ export ANTHROPIC_API_KEY='你的 API Key'
 mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s01.S01AgentLoopDemo
 ```
 
-测试：
+真实 API smoke test：
 
-- 输入：
+试试这些 prompt：
 
-```text
-创建一个输出hello world的python文件
-```
-- 观察控制台输出
-也可以试一个更贴近编码 agent 的例子：创建一个输出 `hello world` 的 Python 文件。
-
+1. `创建一个名为 hello.py 的文件，内容是打印 "Hello, World!"`
+2. `列出当前目录中的所有 Python 文件`
+3. `当前 git 分支是什么？`
 
 预期观察：
 
-- 模型调用 `bash` 创建文件，例如写入 `print("hello world")`。
+- 模型需要触碰真实环境时会调用 `bash`，例如创建文件、执行 `find` 或查看 git 分支。
 - 控制台出现 `Tool> bash ...` 和 `ToolResult> exit_code=0`。
-- 运行 `python3 hello.py` 时输出 `hello world`。
+- 当模型已经拿到足够信息时，不再调用工具，循环结束并返回最终回答。
 
 ### 源码注释补充
 
