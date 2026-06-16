@@ -289,6 +289,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s03.S03Permiss
 
 同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
 
+### 提示词位置调整
+
+本章将 system prompt 作为 `S03PermissionDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，方便读者先看到模型层面的权限提示。
+
+真正的权限边界仍由 `PermissionManager` 执行，`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法。
+
 ## s04：挂在循环上，不写进循环里
 
 **教学分支：** `s04-hooks`

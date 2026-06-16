@@ -29,14 +29,17 @@ import java.util.Scanner;
  */
 public class S03PermissionDemo {
 
+	// 我在提示词里提醒模型高风险操作要审批；真正的阻止和询问仍由 PermissionManager 执行。
+	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
+			+ ". All destructive operations require user approval.";
+
 	public static void main(String[] args) {
 		Scanner scanner = new Scanner(System.in);
 		AnthropicConfig config = new AnthropicConfig();
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
-		config.setSystemPrompt("You are a coding agent at " + System.getProperty("user.dir")
-				+ ". All destructive operations require user approval.");
+		config.setSystemPrompt(SYSTEM_PROMPT);
 
 		File workdir = new File(".");
 		ToolRegistry registry = new ToolRegistry()
