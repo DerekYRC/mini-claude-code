@@ -22,6 +22,19 @@ public class BashTool implements Tool {
 		this.workdir = workdir;
 	}
 
+	/*
+	 * {
+	 *   "name": "bash",
+	 *   "description": "Run a shell command and return stdout/stderr",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "command": {"type": "string", "description": "Shell command to run"}
+	 *     },
+	 *     "required": ["command"]
+	 *   }
+	 * }
+	 */
 	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()
