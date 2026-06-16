@@ -24,7 +24,7 @@ import java.util.Scanner;
  */
 public class S01AgentLoopDemo {
 
-	// system prompt 放在 demo 顶部，方便读者先看到本章给模型的角色和工具边界。
+	// system prompt 放在 demo 顶部，便于对照本章角色和工具边界。
 	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
 			+ ". Use bash to solve tasks. Act, don't explain.";
 
@@ -36,7 +36,7 @@ public class S01AgentLoopDemo {
 		config.setSystemPrompt(SYSTEM_PROMPT);
 		AnthropicLlmClient llmClient = new AnthropicLlmClient(config);
 
-		// s01 只有一个工具，先让读者把“工具闭环”看清楚。
+		// s01 只注册一个工具，聚焦最小工具闭环。
 		List<Tool> tools = Collections.singletonList(new BashTool(new File(".")));
 		AgentLoopListener loopListener = new AgentLoopListener() {
 			@Override

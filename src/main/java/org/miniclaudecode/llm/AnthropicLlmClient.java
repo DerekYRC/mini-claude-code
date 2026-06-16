@@ -23,8 +23,7 @@ import java.util.Map;
 /**
  * 最小 Anthropic Messages HTTP 客户端。
  *
- * 本项目不用 SDK，而是用 Hutool + FastJSON 显式展示请求和响应结构，
- * 方便读者看到 Claude Code 风格 Agent 到底给模型发送了什么。
+ * 本项目不用 SDK，而是用 Hutool + FastJSON 显式保留请求和响应结构。
  */
 public class AnthropicLlmClient implements LlmClient {
 

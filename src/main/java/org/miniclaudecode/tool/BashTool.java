@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * s01 唯一真实工具：执行 shell 命令。
  *
- * 本章故意不做权限判断，让读者先看清楚“模型请求工具 -> Java 执行工具 -> 结果回给模型”的闭环。
+ * 本章故意不做权限判断，只保留“模型请求工具 -> Java 执行工具 -> 结果回给模型”的闭环。
  */
 public class BashTool implements Tool {
 
