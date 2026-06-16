@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
+/**
+ * 写入 workdir 内 UTF-8 文本文件的工具。
+ */
 public class WriteFileTool implements Tool {
 
 	private final PathGuard pathGuard;
@@ -16,6 +19,20 @@ public class WriteFileTool implements Tool {
 		this.pathGuard = new PathGuard(workdir);
 	}
 
+	/*
+	 * {
+	 *   "name": "write_file",
+	 *   "description": "Write content to a UTF-8 file in the workdir",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "path": {"type": "string", "description": "File path relative to the workdir"},
+	 *       "content": {"type": "string", "description": "Content to write"}
+	 *     },
+	 *     "required": ["path", "content"]
+	 *   }
+	 * }
+	 */
 	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()
@@ -47,6 +64,7 @@ public class WriteFileTool implements Tool {
 			File target = pathGuard.resolve(path);
 			File parent = target.getParentFile();
 			if (parent != null) {
+				// 自动创建父目录，让 demo prompt 可以直接写入 target/... 这类路径。
 				Files.createDirectories(parent.toPath());
 			}
 			Files.writeString(target.toPath(), content, StandardCharsets.UTF_8);
