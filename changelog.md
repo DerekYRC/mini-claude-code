@@ -459,8 +459,17 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s05.S05TodoDem
 
 真实 API smoke test：
 
-- prompt：`请务必先调用 todo_write 工具，写入两个任务：检查 s05 demo 为 in_progress，总结结果为 pending。然后只回答 todo_write 的工具结果。`
-- 预期观察：控制台先出现 `Tool> todo_write ...`，工具结果包含 `Updated 2 tasks`、`[in_progress] 检查 s05 demo` 和 `[pending] 总结结果`。
+试试这些 prompt：
+
+1. `重构 target/s05-example/hello.py：如果文件不存在，先创建一个简单 hello 函数，然后补充类型标注、docstring 和 main guard`
+2. `在 target/s05-example/demo_pkg 下创建一个 Python package，包含 __init__.py、utils.py 和 tests/test_utils.py`
+3. `检查 target/s05-example 下的 Python 文件，并修复明显的风格问题`
+
+预期观察：
+
+- 第一次工具调用应优先出现 `Tool> todo_write ...`。
+- TODO 会被拆成多步，并且执行过程中状态从 `pending` 变成 `in_progress` / `completed`。
+- 后续才会出现写文件、读文件、bash 验证等工具调用。
 
 ### 源码注释补充
 
