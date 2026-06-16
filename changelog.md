@@ -443,6 +443,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s05.S05TodoDem
 
 同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
 
+### 提示词位置调整
+
+本章将 system prompt 作为 `S05TodoDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词内容保持参考项目的计划约束。
+
+`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
+
 ## s06：大任务拆小，每个小任务干净的上下文
 
 **教学分支：** `s06-subagent`
