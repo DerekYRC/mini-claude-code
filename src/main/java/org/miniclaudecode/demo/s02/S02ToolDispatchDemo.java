@@ -27,7 +27,7 @@ import java.util.Scanner;
  */
 public class S02ToolDispatchDemo {
 
-	// 本章提示词放在 demo 顶部，读者能直接看到“多工具 Agent”给模型的使用约束。
+	// system prompt 放在 demo 顶部，便于对照本章多工具使用约束。
 	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
 			+ ". Use tools to solve tasks. Act, don't explain.";
 
