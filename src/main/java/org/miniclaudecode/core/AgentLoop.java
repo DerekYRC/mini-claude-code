@@ -15,6 +15,11 @@ import org.miniclaudecode.tool.ToolResult;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * s06 的 Agent 循环。
+ *
+ * 本章新增 maxTurns，让父 Agent 和子 Agent 可以使用不同的循环上限。
+ */
 public class AgentLoop {
 
 	private static final int DEFAULT_MAX_TURNS = 20;
@@ -66,6 +71,7 @@ public class AgentLoop {
 
 	public AgentLoop(LlmClient llmClient, ToolRegistry toolRegistry, AgentLoopListener listener,
 			int maxTurns) {
+		// 子 Agent 可以使用不同的轮数上限，但默认仍保持 20。
 		this(llmClient, toolRegistry, listener, null, null, maxTurns);
 	}
 

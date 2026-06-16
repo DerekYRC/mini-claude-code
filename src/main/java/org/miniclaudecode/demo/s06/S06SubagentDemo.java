@@ -23,6 +23,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * s06 启动入口：父 Agent 拥有 task 工具，子 Agent 只拥有基础工具。
+ */
 public class S06SubagentDemo {
 
 	public static void main(String[] args) {
@@ -33,7 +36,9 @@ public class S06SubagentDemo {
 		AnthropicConfig subConfig = config("You are a coding agent at " + System.getProperty("user.dir")
 				+ ". Complete the task you were given, then return a concise summary. Do not delegate further.");
 
+		// 子工具池不包含 task，避免子 Agent 递归创建更多子 Agent。
 		ToolRegistry subTools = baseTools(workdir);
+		// 父工具池包含 task，用来把复杂子任务委托给干净上下文的子 Agent。
 		ToolRegistry parentTools = baseTools(workdir)
 				.register(new TaskTool(new AnthropicLlmClient(subConfig), subTools));
 
