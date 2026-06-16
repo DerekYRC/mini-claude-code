@@ -59,11 +59,13 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s01.S01AgentLoopDemo
 ```
 
-可以试这个输入，观察是否出现 `Tool> bash`：
+试试这些 prompt：
 
-```text
-请务必调用 bash 工具执行：pwd。然后只回答工具输出。
-```
+1. `创建一个名为 hello.py 的文件，内容是打印 "Hello, World!"`
+2. `列出当前目录中的所有 Python 文件`
+3. `当前 git 分支是什么？`
+
+观察重点：什么时候出现 `Tool> bash`，什么时候模型不再调用工具并结束循环。
 
 ## 参考项目
 
