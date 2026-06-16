@@ -15,6 +15,11 @@ import org.miniclaudecode.tool.ToolResult;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * s04 的 Agent 循环。
+ *
+ * 主循环只在固定位置触发 hook；权限、日志、统计等能力都挂在外部。
+ */
 public class AgentLoop {
 
 	private final LlmClient llmClient;
@@ -115,6 +120,7 @@ public class AgentLoop {
 					results.add(new ToolResultBlock(toolUse.getId(), decision.getMessage()));
 					continue;
 				}
+				// PreToolUse 位于工具真正执行前，可以阻断本次工具调用。
 				HookDecision hookDecision = triggerPreToolUseHooks(toolUse);
 				if (hookDecision.isBlocked()) {
 					results.add(new ToolResultBlock(toolUse.getId(), hookDecision.getMessage()));
@@ -122,6 +128,7 @@ public class AgentLoop {
 				}
 				ToolResult result = executeTool(toolUse);
 				listener.afterToolUse(toolUse, result);
+				// PostToolUse 位于工具执行后，适合记录日志或检查输出。
 				triggerPostToolUseHooks(toolUse, result);
 				results.add(new ToolResultBlock(toolUse.getId(), result.getContent()));
 			}
@@ -167,6 +174,7 @@ public class AgentLoop {
 		if (hookManager == null) {
 			return;
 		}
+		// Stop 位于循环结束时，适合做会话级统计。
 		HookContext context = new HookContext(HookEvent.STOP);
 		context.setMessages(messages);
 		hookManager.trigger(HookEvent.STOP, context);

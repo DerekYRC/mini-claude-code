@@ -316,3 +316,9 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 
 - prompt：`请调用 bash 工具执行：printf s04-hook-ok。然后只回答工具输出。`
 - 预期观察：控制台出现 `[HOOK] UserPromptSubmit`、`[HOOK] PreToolUse: bash ...`、工具输出 `s04-hook-ok`、以及 `[HOOK] Stop: session used 1 tool calls`。
+
+### 源码注释补充
+
+本章为核心源码补充了中文注释，重点解释本章机制挂载在 Agent 循环中的位置、新增类的职责边界，以及为了保持教学最小化而刻意没有实现的能力。
+
+同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。

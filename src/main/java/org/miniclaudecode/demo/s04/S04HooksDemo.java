@@ -26,6 +26,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * s04 启动入口：把权限、日志、输出检查和停止统计都注册成 hook。
+ */
 public class S04HooksDemo {
 
 	public static void main(String[] args) {
@@ -76,6 +79,7 @@ public class S04HooksDemo {
 
 	private static HookManager hooks(File workdir, Scanner scanner) {
 		HookManager hooks = new HookManager();
+		// demo 故意把 hook 写在入口类里，方便读者直接看到扩展点挂在哪里。
 		hooks.register(HookEvent.USER_PROMPT_SUBMIT, context -> {
 			System.out.println("[HOOK] UserPromptSubmit: working in " + workdir.getAbsolutePath());
 			return HookDecision.pass();
@@ -132,6 +136,7 @@ public class S04HooksDemo {
 	}
 
 	private static void triggerUserPromptHook(HookManager hookManager, String query) {
+		// UserPromptSubmit 不在 AgentLoop 内触发，因为本章让 demo 负责接收用户输入。
 		HookContext context = new HookContext(HookEvent.USER_PROMPT_SUBMIT);
 		context.setUserPrompt(query);
 		hookManager.trigger(HookEvent.USER_PROMPT_SUBMIT, context);
