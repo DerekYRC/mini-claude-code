@@ -10,6 +10,9 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 读取 workdir 内 UTF-8 文本文件的工具。
+ */
 public class ReadFileTool implements Tool {
 
 	private final File workdir;
@@ -49,6 +52,7 @@ public class ReadFileTool implements Tool {
 			Integer limit = input.getInteger("limit");
 			List<String> lines = Files.readAllLines(target.toPath(), StandardCharsets.UTF_8);
 			if (limit != null && limit > 0 && limit < lines.size()) {
+				// limit 是教学版的简单输出控制，避免一次把大文件全部塞回上下文。
 				List<String> limited = new ArrayList<>(lines.subList(0, limit));
 				limited.add("... (" + (lines.size() - limit) + " more lines)");
 				lines = limited;
