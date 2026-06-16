@@ -28,6 +28,19 @@ public class TaskTool implements Tool {
 	}
 
 	@Override
+	/*
+	 * {
+	 *   "name": "task",
+	 *   "description": "Launch a subagent for a complex subtask. Returns only the final summary.",
+	 *   "input_schema": {
+	 *     "type": "object",
+	 *     "properties": {
+	 *       "description": {"type": "string", "description": "Subtask for a fresh-context subagent"}
+	 *     },
+	 *     "required": ["description"]
+	 *   }
+	 * }
+	 */
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()
 				.fluentPut("description", new JSONObject()
