@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
+/**
+ * 精确替换文件中文本的工具。
+ */
 public class EditFileTool implements Tool {
 
 	private final PathGuard pathGuard;
@@ -53,6 +56,7 @@ public class EditFileTool implements Tool {
 			if (!text.contains(oldText)) {
 				return new ToolResult("Error: text not found in " + path);
 			}
+			// 只替换第一次精确匹配，保持教学工具行为简单且可预测。
 			Files.writeString(target.toPath(), text.replaceFirst(java.util.regex.Pattern.quote(oldText),
 					java.util.regex.Matcher.quoteReplacement(newText)), StandardCharsets.UTF_8);
 			return new ToolResult("Edited " + path);

@@ -218,6 +218,12 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s02.S02ToolDis
 - prompt：`请依次使用 write_file、edit_file、read_file、glob 工具：先写入 target/s02-demo.txt，内容为 old hello；再把 old 替换为 new；然后读取文件内容；最后用 glob 查找 target/s02-*.txt，并回答最终文件内容和匹配结果。`
 - 预期观察：控制台出现 `Tool> write_file ...`、`Tool> edit_file ...`、`Tool> read_file ...`、`Tool> glob ...`，最终回答包含 `new hello` 和 `target/s02-demo.txt`。
 
+### 源码注释补充
+
+本章为核心源码补充了中文注释，重点解释本章机制挂载在 Agent 循环中的位置、新增类的职责边界，以及为了保持教学最小化而刻意没有实现的能力。
+
+同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
+
 ## s03：先划边界，再给自由
 
 **教学分支：** `s03-permission`

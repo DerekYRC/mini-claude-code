@@ -16,10 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * s01 的最小 Agent 循环。
+ * 聚合版 Agent 循环。
  *
- * 这个类只做三件事：把 history 发给模型、执行模型请求的工具、
- * 再把工具结果塞回 history 交给模型继续思考。
+ * s01 展示 LLM -> 工具 -> LLM 的闭环，s02 开始把工具查找交给 ToolRegistry；
+ * 后续章节继续在这个循环上挂权限、hook 和子 Agent 等能力。
  */
 public class AgentLoop {
 
@@ -93,10 +93,10 @@ public class AgentLoop {
 
 	public AssistantMessage run(List<Message> messages) {
 		for (int turn = 0; turn < maxTurns; turn++) {
-			// 一轮 Agent 循环：LLM -> tool_use -> tool_result -> 下一轮 LLM。
+			// 主循环不关心工具数量，只把当前 history 和工具定义发给模型。
 			AssistantMessage response = llmClient.chat(messages, toolDefinitions());
 			listener.onAssistantMessage(response);
-			// assistant 消息必须写回 history，否则下一轮模型不知道自己刚才请求了哪个工具。
+			// assistant 消息写回 history，下一轮模型才能看到自己刚才的 tool_use。
 			messages.add(Message.assistant(response.getContent()));
 
 			List<ToolResultBlock> toolResults = executeToolUses(response);
@@ -126,7 +126,7 @@ public class AgentLoop {
 	}
 
 	/**
-	 * 执行 assistant 消息中的所有 tool_use，并把结果转成 tool_result block。
+	 * 执行 assistant 消息中的 tool_use。真正的工具查找由 ToolRegistry 完成。
 	 */
 	private List<ToolResultBlock> executeToolUses(AssistantMessage response) {
 		List<ToolResultBlock> results = new ArrayList<>();
@@ -154,6 +154,7 @@ public class AgentLoop {
 	}
 
 	private ToolResult executeTool(ToolUseBlock toolUse) {
+		// s02 的新增点：按工具名从 dispatch map 找 handler，AgentLoop 不写死具体工具类。
 		Tool tool = toolRegistry.find(toolUse.getName());
 		if (tool == null) {
 			return new ToolResult("Unknown tool: " + toolUse.getName());
