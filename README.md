@@ -73,7 +73,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDe
 s02 在 s01 基础上加入 `ToolRegistry`，并注册 `bash/read_file/write_file/edit_file/glob` 五个工具。
 
 ```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s02.S02ToolDispatchDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S02ToolDispatchDemo
 ```
 
 试试这些 prompt：
@@ -90,7 +90,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s02.S02ToolDis
 s03 在工具执行前加入权限管线：硬阻止列表、规则匹配、用户确认。
 
 ```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s03.S03PermissionDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S03PermissionDemo
 ```
 
 试试这些 prompt：
@@ -107,7 +107,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s03.S03Permiss
 s04 把权限、日志、输出检查、停止统计挂到 Hook 上，主循环只负责触发事件。
 
 ```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s04.S04HooksDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S04HooksDemo
 ```
 
 试试这些 prompt：
@@ -123,7 +123,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s04.S04HooksDe
 s05 加入 `todo_write` 工具，让 Agent 在多步骤任务前先写计划，并在执行中更新状态。
 
 ```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s05.S05TodoDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S05TodoDemo
 ```
 
 试试这些 prompt：
@@ -139,7 +139,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s05.S05TodoDem
 s06 加入 `task` 工具，让父 Agent 把复杂子任务交给一个干净上下文的子 Agent。子 Agent 不注册 `task`，只返回最终摘要。
 
 ```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s06.S06SubagentDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S06SubagentDemo
 ```
 
 试试这些 prompt：
@@ -155,7 +155,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s06.S06Subagen
 s07 启动时扫描 `skills/*/SKILL.md`，只把技能名和一句描述放进 system prompt。模型需要细节时调用 `load_skill`，通过 tool_result 注入 `<skill name="...">正文</skill>`。
 
 ```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s07.S07SkillLoadingDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S07SkillLoadingDemo
 ```
 
 试试这些 prompt：
@@ -171,7 +171,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s07.S07SkillLo
 s08 在 LLM 前加入四层压缩管线，并把 `compact` 做成一个控制工具。大工具结果会先落盘，长历史会裁剪或摘要。
 
 ```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s08.S08ContextCompactDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S08ContextCompactDemo
 ```
 
 试试这些 prompt：
