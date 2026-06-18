@@ -1,4 +1,4 @@
-package org.miniclaudecode.demo.s03;
+package org.miniclaudecode.demo;
 
 import org.miniclaudecode.core.AgentLoop;
 import org.miniclaudecode.core.AgentLoopListener;
@@ -9,48 +9,35 @@ import org.miniclaudecode.core.TextBlock;
 import org.miniclaudecode.core.ToolUseBlock;
 import org.miniclaudecode.llm.AnthropicConfig;
 import org.miniclaudecode.llm.AnthropicLlmClient;
-import org.miniclaudecode.permission.ConsoleApprovalPrompter;
-import org.miniclaudecode.permission.PermissionManager;
 import org.miniclaudecode.tool.BashTool;
-import org.miniclaudecode.tool.EditFileTool;
-import org.miniclaudecode.tool.GlobTool;
-import org.miniclaudecode.tool.ReadFileTool;
-import org.miniclaudecode.tool.ToolRegistry;
+import org.miniclaudecode.tool.Tool;
 import org.miniclaudecode.tool.ToolResult;
-import org.miniclaudecode.tool.WriteFileTool;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
 /**
- * s03 启动入口：复用 s02 的工具池，并在工具执行前挂上权限管线。
+ * s01 启动入口：注册一个 bash 工具，然后把用户输入不断交给 AgentLoop。
  */
-public class S03PermissionDemo {
+public class S01AgentLoopDemo {
 
-	// prompt 提醒模型高风险操作要审批；真正的阻止和询问由 PermissionManager 执行。
 	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
-			+ ". All destructive operations require user approval.";
+			+ ". Use bash to solve tasks. Act, don't explain.";
 
 	public static void main(String[] args) {
-		Scanner scanner = new Scanner(System.in);
 		AnthropicConfig config = new AnthropicConfig();
 		config.setBaseUrl(requiredEnv("ANTHROPIC_BASE_URL"));
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
 		config.setSystemPrompt(SYSTEM_PROMPT);
+		AnthropicLlmClient llmClient = new AnthropicLlmClient(config);
 
-		File workdir = new File(".");
-		ToolRegistry registry = new ToolRegistry()
-				.register(new BashTool(workdir))
-				.register(new ReadFileTool(workdir))
-				.register(new WriteFileTool(workdir))
-				.register(new EditFileTool(workdir))
-				.register(new GlobTool(workdir));
-		// s03 仍复用 s02 工具池，只是在执行前多一道“能不能做”的门。
-		PermissionManager permissionManager = new PermissionManager(workdir, new ConsoleApprovalPrompter(scanner));
-		AgentLoop loop = new AgentLoop(new AnthropicLlmClient(config), registry, new AgentLoopListener() {
+		// s01 只注册一个工具，聚焦最小工具闭环。
+		List<Tool> tools = Collections.singletonList(new BashTool(new File(".")));
+		AgentLoopListener loopListener = new AgentLoopListener() {
 			@Override
 			public void beforeToolUse(ToolUseBlock toolUse) {
 				System.out.println("Tool> " + toolUse.getName() + " " + toolUse.getInput());
@@ -58,16 +45,21 @@ public class S03PermissionDemo {
 
 			@Override
 			public void afterToolUse(ToolUseBlock toolUse, ToolResult result) {
-				System.out.println("ToolResult> " + preview(result.getContent()));
+				System.out.println("ToolResult> " + result.getContent());
 			}
-		}, permissionManager);
+		};
+		AgentLoop loop = new AgentLoop(
+				llmClient,
+				tools,
+				loopListener);
 
-		System.out.println("s03: Permission");
+		System.out.println("s01: Agent Loop");
 		System.out.println("输入问题，回车发送。输入 q 退出。\n");
 
 		List<Message> history = new ArrayList<>();
+		Scanner scanner = new Scanner(System.in);
 		while (true) {
-			System.out.print("s03 >> ");
+			System.out.print("s01 >> ");
 			if (!scanner.hasNextLine()) {
 				break;
 			}
@@ -78,6 +70,7 @@ public class S03PermissionDemo {
 				break;
 			}
 
+			// history 留在 demo 外层，支持用户连续输入时保留上下文。
 			history.add(Message.user(query));
 			AssistantMessage answer = loop.run(history);
 			for (ContentBlock block : answer.getContent()) {
@@ -87,13 +80,6 @@ public class S03PermissionDemo {
 			}
 			System.out.println();
 		}
-	}
-
-	private static String preview(String content) {
-		if (content == null || content.length() <= 500) {
-			return content;
-		}
-		return content.substring(0, 500) + "\n... (" + (content.length() - 500) + " more chars)";
 	}
 
 	private static String requiredEnv(String name) {
