@@ -1,4 +1,4 @@
-package org.miniclaudecode.demo.s06;
+package org.miniclaudecode.demo;
 
 import org.miniclaudecode.core.AgentLoop;
 import org.miniclaudecode.core.AgentLoopListener;
