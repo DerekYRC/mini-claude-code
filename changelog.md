@@ -195,7 +195,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 启动 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s02.S02ToolDispatchDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S02ToolDispatchDemo
 ```
 
 真实 API smoke test：
@@ -252,7 +252,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 启动 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s03.S03PermissionDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S03PermissionDemo
 ```
 
 真实 API smoke test：
@@ -325,7 +325,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 启动 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s04.S04HooksDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S04HooksDemo
 ```
 
 真实 API smoke test：
@@ -403,7 +403,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 启动 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s05.S05TodoDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S05TodoDemo
 ```
 
 真实 API smoke test：
@@ -460,7 +460,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 启动 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s06.S06SubagentDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S06SubagentDemo
 ```
 
 真实 API smoke test：
