@@ -124,7 +124,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDe
 
 **教学分支：** `s02-tool-dispatch`
 
-s02 只解决一个问题：工具越来越多时，主循环不能因为“新增工具”继续变胖。
+s02 只解决一个问题：工具越来越多时，Agent 循环不能因为「新增工具」继续变胖。
 
 本章新增：
 
@@ -235,15 +235,11 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S02ToolDispatc
 
 ### 源码注释补充
 
-本章为核心源码补充了中文注释，重点解释本章机制挂载在 Agent 循环中的位置、新增类的职责边界，以及为了保持教学最小化而刻意没有实现的能力。
-
-同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
+本章为核心源码补充了中文注释，重点解释 `ToolRegistry` 的 dispatch 机制和五个工具的职责边界。
 
 ### 提示词位置调整
 
 本章将 system prompt 作为 `S02ToolDispatchDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，方便读者先看到模型被要求使用工具池解决任务。
-
-`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
 
 ## s03：先划边界，再给自由
 
