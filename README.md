@@ -57,7 +57,7 @@ git switch s01-agent-loop
 运行 demo：
 
 ```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s01.S01AgentLoopDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDemo
 ```
 
 试试这些 prompt：
