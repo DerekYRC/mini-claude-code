@@ -56,7 +56,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 再运行 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s01.S01AgentLoopDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S01AgentLoopDemo
 ```
 
 试试这些 prompt：
