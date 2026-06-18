@@ -4,7 +4,7 @@
 
 ## 阶段一：基础 Agent Harness
 
-阶段一包含 s01-s10：
+阶段一包含 s01-s11：
 
 - s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
 - s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
@@ -16,6 +16,7 @@
 - s08 Context Compact：上下文总会满，要有办法腾地方，分支 `s08-context-compact`
 - s09 Memory：记住该记的，忘掉该忘的，分支 `s09-memory`
 - s10 Task System：大目标拆成小任务，排好序，持久化，分支 `s10-task-system`
+- s11 Background Tasks：慢操作丢后台，agent 继续思考，分支 `s11-background-tasks`
 
 ## s01：One loop & Bash is all you need
 
@@ -916,3 +917,134 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S10TaskSystemD
 ### 提示词位置调整
 
 本章将 system prompt 放在 `S10TaskSystemDemo` 顶部的 `SYSTEM_PROMPT` 静态变量中，内容对齐参考实现的三段：身份、可用工具、工作目录。
+
+## s11：慢操作丢后台，agent 继续思考
+
+**教学分支：** `s11-background-tasks`
+
+本章解决的问题是：`npm install` 要 3 分钟，Agent 干等就是浪费。最小解法是把慢操作扔到 daemon 线程执行，先回占位结果让 Agent 继续工作，后台完成后通知注入下一轮。
+
+本章对齐 `learn-claude-code/s13_background_tasks`。
+
+### 核心变化
+
+s11 在 s10 任务系统基础上新增后台执行路径：
+
+```text
+工具调用 → should_run_background?
+  ├─ false → 同步执行 → tool_result 立即返回
+  └─ true  → daemon 线程 → 占位 tool_result → 下轮 <task_notification>
+```
+
+同步 vs 后台：
+
+| | 同步 (s10) | 后台 (s11) |
+|---|---|---|
+| 慢操作 | Agent 干等 | 后台线程执行 |
+| Agent 空闲 | 是 | 否，继续处理 |
+| 结果 | 立即返回 | 下轮注入通知 |
+| 判断标准 | — | `run_in_background` 参数（模型显式请求），启发式兜底 |
+
+### 工作流程
+
+```
+Turn 1:
+  LLM → bash "npm install" (run_in_background=true)
+  → start_background_task → bg_0001
+  → tool_result: "[Background task bg_0001 started]..."
+  → LLM: "已把 npm install 放到后台，我先读一下 package.json"
+
+Turn 2:
+  LLM → read_file "package.json" (同步，毫秒级)
+  → tool_result: 文件内容
+  → collect_background_results: bg_0001 完成！注入 <task_notification>
+  → LLM 在同一条消息里看到: package.json 内容 + npm install 完成通知
+```
+
+Agent 没有干等 `npm install`，后台执行期间它去读了配置文件。
+
+### 本章新增
+
+- `BackgroundTask`：后台任务状态数据类（`bgId`、`toolUseId`、`command`、`status`）。
+- `BackgroundDecider`：判断逻辑——显式 `run_in_background=true` 优先，关键词启发式兜底（`install/build/test/deploy/compile/docker build/pip install/npm install/cargo build/pytest/make`）。
+- `BackgroundTasks`：daemon 线程管理器，`ConcurrentHashMap` 保证线程安全，`AtomicInteger` 生成唯一 bg_id。
+- `BackgroundAgentLoop`：s11 专用循环，内置两条执行路径（同步/后台）和通知注入。
+- `S11BackgroundTasksDemo`：注册 8 个工具（bash + 5 任务工具 + read/write），bash 新增 `run_in_background` 参数。
+
+### 判断逻辑
+
+两层判断：
+
+1. 模型显式设置 `run_in_background=true` → 走后台（主路径）。
+2. 命令含慢操作关键词 → 关键词兜底（保底路径）。
+
+只对 `bash` 工具生效。其他工具（read_file、write_file 等）永远同步执行。
+
+### 后台任务管理器
+
+`BackgroundTasks`：
+
+- `start(block, registry)`：创建 daemon 线程执行工具，立即返回 `bg_0001` 格式的 ID。
+- `collectNotifications()`：收集已完成任务，返回 `<task_notification>` XML 文本列表，从 map 中移除已完成任务。
+- 线程安全：`ConcurrentHashMap` + `AtomicInteger`，不加显式锁。
+- 超时：bash 工具自身有 120 秒超时，教学版不额外加后台超时控制。
+- daemon 线程：进程退出时自动终止。
+
+### 通知格式
+
+后台完成后以 `<task_notification>` XML 注入，不复用原始 `tool_use_id`：
+
+```xml
+<task_notification>
+  <task_id>bg_0001</task_id>
+  <status>completed</status>
+  <command>npm install</command>
+  <summary>added 245 packages in 45s</summary>
+</task_notification>
+```
+
+不复用 `tool_use_id` 的原因：原始 tool call 已经用占位 `tool_result` 回复了，后台完成是独立事件，这符合 Messages API 的工具配对语义（一个 `tool_use` 只对应一个 `tool_result`）。
+
+### 循环集成
+
+`BackgroundAgentLoop` 是独立类（不继承 `AgentLoop`），参照 `CompactingAgentLoop` 的模式：
+
+- 每轮 LLM 调用前，先调用 `collectNotifications()` 注入上轮后台完成通知。
+- 工具执行时，`BackgroundDecider.shouldRunBackground()` 判断走同步还是后台路径。
+- 后台路径：`backgroundTasks.start()` → 占位 tool_result。
+- 同步路径：直接 `tool.execute()`。
+
+### 验证
+
+启动命令：
+
+```sh
+git switch s11-background-tasks
+
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S11BackgroundTasksDemo
+```
+
+真实 API smoke test，试试这些 prompt：
+
+1. `后台运行 pip list，同时查找当前目录中的所有 Python 文件`
+2. `使用 run_in_background 运行 npm install，在等待的同时读取 package.json`
+3. `创建一个设置项目的任务，然后在后台运行 pip list`
+
+观察重点：
+
+- 慢操作是否出现 `[background] dispatched bg_0001: ...`？
+- 后台执行期间 Agent 是否继续处理其他工具调用？
+- 后台完成后是否出现 `[background done] bg_0001: ...` 和 `[inject]`？
+- 下一轮是否注入 `<task_notification>`？
+
+### 源码注释补充
+
+本章为核心源码补充了中文注释，重点解释 `shouldRunBackground` 的两层判断、daemon 线程的生命周期、`ConcurrentHashMap` 的线程安全策略，以及为什么通知不复用原始 `tool_use_id`。
+
+### 提示词位置调整
+
+本章将 system prompt 作为 `S11BackgroundTasksDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词中明确告知模型 bash 工具有可选的 `run_in_background` 参数。
