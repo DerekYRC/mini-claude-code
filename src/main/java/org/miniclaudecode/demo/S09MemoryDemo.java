@@ -1,4 +1,4 @@
-package org.miniclaudecode.demo.s09;
+package org.miniclaudecode.demo;
 
 import org.miniclaudecode.compact.CompactionPipeline;
 import org.miniclaudecode.core.AgentLoopListener;

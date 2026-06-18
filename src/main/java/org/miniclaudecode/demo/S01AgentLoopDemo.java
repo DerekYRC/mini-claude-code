@@ -1,4 +1,4 @@
-package org.miniclaudecode.demo.s05;
+package org.miniclaudecode.demo;
 
 import org.miniclaudecode.core.AgentLoop;
 import org.miniclaudecode.core.AgentLoopListener;
@@ -10,29 +10,22 @@ import org.miniclaudecode.core.ToolUseBlock;
 import org.miniclaudecode.llm.AnthropicConfig;
 import org.miniclaudecode.llm.AnthropicLlmClient;
 import org.miniclaudecode.tool.BashTool;
-import org.miniclaudecode.tool.EditFileTool;
-import org.miniclaudecode.tool.GlobTool;
-import org.miniclaudecode.tool.ReadFileTool;
-import org.miniclaudecode.tool.TodoWriteTool;
-import org.miniclaudecode.tool.ToolRegistry;
+import org.miniclaudecode.tool.Tool;
 import org.miniclaudecode.tool.ToolResult;
-import org.miniclaudecode.tool.WriteFileTool;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
 /**
- * s05 启动入口：把“先计划再执行”的约束交给 todo_write 工具和 system prompt。
+ * s01 启动入口：注册一个 bash 工具，然后把用户输入不断交给 AgentLoop。
  */
-public class S05TodoDemo {
+public class S01AgentLoopDemo {
 
-	// 加上将复杂任务进行分解的提示词
 	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
-			+ ". Before starting any multi-step task, use todo_write to plan your steps. "
-			+ "Keep exactly one task in_progress while working. Mark tasks completed as you finish. "
-			+ "Act, don't explain.";
+			+ ". Use bash to solve tasks. Act, don't explain.";
 
 	public static void main(String[] args) {
 		AnthropicConfig config = new AnthropicConfig();
@@ -40,16 +33,11 @@ public class S05TodoDemo {
 		config.setApiKey(requiredEnv("ANTHROPIC_API_KEY"));
 		config.setModel(requiredEnv("MODEL_ID"));
 		config.setSystemPrompt(SYSTEM_PROMPT);
+		AnthropicLlmClient llmClient = new AnthropicLlmClient(config);
 
-		File workdir = new File(".");
-		ToolRegistry registry = new ToolRegistry()
-				.register(new BashTool(workdir))
-				.register(new ReadFileTool(workdir))
-				.register(new WriteFileTool(workdir))
-				.register(new EditFileTool(workdir))
-				.register(new GlobTool(workdir))
-				.register(new TodoWriteTool());
-		AgentLoop loop = new AgentLoop(new AnthropicLlmClient(config), registry, new AgentLoopListener() {
+		// s01 只注册一个工具，聚焦最小工具闭环。
+		List<Tool> tools = Collections.singletonList(new BashTool(new File(".")));
+		AgentLoopListener loopListener = new AgentLoopListener() {
 			@Override
 			public void beforeToolUse(ToolUseBlock toolUse) {
 				System.out.println("Tool> " + toolUse.getName() + " " + toolUse.getInput());
@@ -57,17 +45,21 @@ public class S05TodoDemo {
 
 			@Override
 			public void afterToolUse(ToolUseBlock toolUse, ToolResult result) {
-				System.out.println("ToolResult> " + preview(result.getContent()));
+				System.out.println("ToolResult> " + result.getContent());
 			}
-		});
+		};
+		AgentLoop loop = new AgentLoop(
+				llmClient,
+				tools,
+				loopListener);
 
-		System.out.println("s05: Todo");
+		System.out.println("s01: Agent Loop");
 		System.out.println("输入问题，回车发送。输入 q 退出。\n");
 
 		List<Message> history = new ArrayList<>();
 		Scanner scanner = new Scanner(System.in);
 		while (true) {
-			System.out.print("s05 >> ");
+			System.out.print("s01 >> ");
 			if (!scanner.hasNextLine()) {
 				break;
 			}
@@ -78,6 +70,7 @@ public class S05TodoDemo {
 				break;
 			}
 
+			// history 留在 demo 外层，支持用户连续输入时保留上下文。
 			history.add(Message.user(query));
 			AssistantMessage answer = loop.run(history);
 			for (ContentBlock block : answer.getContent()) {
@@ -87,13 +80,6 @@ public class S05TodoDemo {
 			}
 			System.out.println();
 		}
-	}
-
-	private static String preview(String content) {
-		if (content == null || content.length() <= 800) {
-			return content;
-		}
-		return content.substring(0, 800) + "\n... (" + (content.length() - 800) + " more chars)";
 	}
 
 	private static String requiredEnv(String name) {
