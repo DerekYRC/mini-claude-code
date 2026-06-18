@@ -29,6 +29,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s07 Skill Loading
 - s08 Context Compact
 - s09 Memory
+- s10 Task System
 
 ## 分支学习
 
@@ -43,6 +44,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s07-skill-loading`
 - `s08-context-compact`
 - `s09-memory`
+- `s10-task-system`
 
 切换示例：
 
@@ -198,6 +200,23 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S09MemoryDemo
 4. `我还喜欢字符串使用单引号，而不是双引号。`
 
 观察重点：每轮结束后是否出现 `[Memory: extracted N new memories]`；`.memory/` 目录下是否生成 `.md` 文件；`MEMORY.md` 索引是否更新；新一轮对话时 Agent 是否自动加载了之前的记忆。
+
+## 运行 s10
+
+s10 加入持久化任务系统：每个任务保存为 `.tasks/{id}.json`，任务之间用 `blockedBy` 表达依赖，只有依赖完成后才能认领下游任务。
+
+```sh
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S10TaskSystemDemo
+```
+
+试试这些 prompt：
+
+1. `创建任务：设置数据库 schema、创建 API endpoints（依赖 schema）、编写测试（依赖 endpoints）、编写文档（依赖 schema）`
+2. `列出所有任务和状态`
+3. `认领第一个未被阻塞的任务并完成它`
+4. `再次列出任务，哪些任务现在被解锁了？`
+
+观察重点：`.tasks/` 目录下是否生成 JSON 文件；完成任务后，被阻塞的任务是否解锁。
 
 ## 参考项目
 
