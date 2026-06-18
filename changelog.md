@@ -374,19 +374,15 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S04HooksDemo
 
 - 每次工具执行前会出现 `[HOOK]` 日志。
 - 普通读写通过后会触发 `PostToolUse`。
-- 危险命令会被权限 hook 拦截，主循环本身不写死权限规则。
+- 危险命令会被权限 hook 拦截，Agent 循环本身不写死权限规则。
 
 ### 源码注释补充
 
-本章为核心源码补充了中文注释，重点解释本章机制挂载在 Agent 循环中的位置、新增类的职责边界，以及为了保持教学最小化而刻意没有实现的能力。
-
-同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
+本章为核心源码补充了中文注释，重点解释四类 Hook 事件的触发时机和 `HookManager` 的顺序执行机制。
 
 ### 提示词位置调整
 
 本章将 system prompt 作为 `S04HooksDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词内容保持参考项目的工具使用约束。
-
-`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
 
 ## s05：没有计划的 agent 走哪算哪
 
