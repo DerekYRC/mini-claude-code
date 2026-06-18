@@ -194,7 +194,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 启动 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s02.S02ToolDispatchDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S02ToolDispatchDemo
 ```
 
 真实 API smoke test：
@@ -251,7 +251,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 启动 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s03.S03PermissionDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S03PermissionDemo
 ```
 
 真实 API smoke test：
