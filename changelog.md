@@ -120,8 +120,6 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDe
 
 ## s02：加一个工具，只加一个 handler
 
-## s02：加一个工具，只加一个 handler
-
 **教学分支：** `s02-tool-dispatch`
 
 s02 只解决一个问题：工具越来越多时，Agent 循环不能因为「新增工具」继续变胖。
