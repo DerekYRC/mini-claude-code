@@ -187,7 +187,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S08ContextComp
 s09 加入文件系统记忆：`MEMORY.md` 索引常驻 system prompt，相关记忆正文按需注入，每轮结束后提取新记忆。
 
 ```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s09.S09MemoryDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S09MemoryDemo
 ```
 
 试试这些 prompt（分多轮输入，观察记忆的累积和加载）：
