@@ -527,15 +527,11 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S06SubagentDem
 
 ### 源码注释补充
 
-本章为核心源码补充了中文注释，重点解释本章机制挂载在 Agent 循环中的位置、新增类的职责边界，以及为了保持教学最小化而刻意没有实现的能力。
-
-同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
+本章为核心源码补充了中文注释，重点解释 `TaskTool` 如何创建独立上下文的子 Agent 以及父子 Agent 的消息隔离机制。
 
 ### 提示词位置调整
 
 本章将父 Agent 和子 Agent 的 system prompt 分别作为 `PARENT_SYSTEM_PROMPT` 与 `SUBAGENT_SYSTEM_PROMPT` 静态变量，提示词内容保持参考项目的委托边界。
-
-`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
 
 ## s07：用到时再加载，别全塞 prompt 里
 
