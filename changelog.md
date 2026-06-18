@@ -4,7 +4,7 @@
 
 ## 阶段一：基础 Agent Harness
 
-阶段一包含 s01-s09：
+阶段一包含 s01-s10：
 
 - s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
 - s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
@@ -15,6 +15,7 @@
 - s07 Skill Loading：用到时再加载，别全塞 prompt 里，分支 `s07-skill-loading`
 - s08 Context Compact：上下文总会满，要有办法腾地方，分支 `s08-context-compact`
 - s09 Memory：记住该记的，忘掉该忘的，分支 `s09-memory`
+- s10 Task System：大目标拆成小任务，排好序，持久化，分支 `s10-task-system`
 
 ## s01：One loop & Bash is all you need
 
@@ -791,3 +792,127 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S09MemoryDemo
 本章将父 Agent 和子 Agent 的 system prompt 分别作为 `S09MemoryDemo` 顶部的 `SYSTEM_PROMPT_TEMPLATE` 与 `SUBAGENT_SYSTEM_PROMPT` 静态变量。
 
 父 Agent 的提示词对齐参考实现：说明当前工作目录、可用记忆索引、相关记忆会被注入下方，以及遇到明确偏好或 remember 请求时应提取为记忆。
+
+## s10：大目标拆成小任务，排好序，持久化
+
+**教学分支：** `s10-task-system`
+
+s10 对齐参考项目的 `s12_task_system`。本章解决的问题是：TodoWrite 适合当前会话里的执行清单，但大目标需要跨会话恢复、表达依赖顺序，并让后续多 Agent 协作有一个共同任务图。
+
+本章新增：
+
+- `TaskRecord`：普通 Java 数据类，对应 `.tasks/{id}.json`。
+- `TaskStore`：管理 `.tasks/` 目录，负责任务 JSON 读写和列表扫描。
+- `TaskService`：实现 `pending -> in_progress -> completed` 状态机和 `blockedBy` 依赖检查。
+- `CreateTaskTool`：创建持久化任务，可带上游依赖。
+- `ListTasksTool`：列出任务状态、owner 和依赖。
+- `GetTaskTool`：读取单个任务完整 JSON。
+- `ClaimTaskTool`：认领可开始的任务，设置 owner 并改为 `in_progress`。
+- `CompleteTaskTool`：完成任务，并报告刚刚解锁的下游任务。
+- `S10TaskSystemDemo`：注册 `bash/read_file/write_file/create_task/list_tasks/get_task/claim_task/complete_task`。
+
+### Task System vs TodoWrite
+
+TodoWrite 和 Task System 是两个独立层：
+
+| | TodoWrite (s05) | Task System (s10) |
+|---|---|---|
+| 定位 | 当前任务的执行清单 | 可恢复的任务图 |
+| 存储 | 会话内存 | `.tasks/{id}.json` |
+| 依赖 | 无 | `blockedBy` |
+| 生命周期 | 当前会话 | 跨会话保留 |
+| 分工 | 不负责任务认领 | `owner` / claim |
+
+所以 s10 没有复用 `todo_write`，也没有注册 s06 的 `task` 子 Agent 工具。本章只展示“持久化任务图”这一件事。
+
+### 持久化格式
+
+每个任务是一个 JSON 文件：
+
+```json
+{
+  "id": "task_1781770000000_0427",
+  "subject": "setup database schema",
+  "description": "Create initial database schema",
+  "status": "pending",
+  "owner": null,
+  "blockedBy": []
+}
+```
+
+`TaskStore` 只扫描 `.tasks/task_*.json`，并按文件名排序。单个坏文件会被跳过，避免一个损坏任务让 demo 无法启动。
+
+### 依赖和状态机
+
+任务状态只有三种：
+
+```text
+pending -> in_progress -> completed
+```
+
+`claim_task` 是唯一把 `pending` 推进到 `in_progress` 的动作。认领前必须先检查 `blockedBy`：
+
+- 依赖任务不存在：视为 blocked。
+- 任一依赖不是 `completed`：视为 blocked。
+- 所有依赖都完成：允许认领。
+
+`complete_task` 只允许完成 `in_progress` 任务。完成后会扫描其他 `pending` 任务，把新解锁的下游任务列在 `Unblocked:` 后面。
+
+### 五个工具
+
+`create_task`：
+
+```json
+{
+  "name": "create_task",
+  "description": "Create a new task with optional blockedBy dependencies.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "subject": {"type": "string"},
+      "description": {"type": "string"},
+      "blockedBy": {"type": "array", "items": {"type": "string"}}
+    },
+    "required": ["subject"]
+  }
+}
+```
+
+`list_tasks` 列出所有任务摘要；`get_task` 返回完整 JSON；`claim_task` 设置 owner 并改为 `in_progress`；`complete_task` 标记完成并报告解锁结果。
+
+### 验证
+
+启动命令：
+
+```sh
+git switch s10-task-system
+
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S10TaskSystemDemo
+```
+
+真实 API smoke test：
+
+试试这些 prompt：
+
+1. `创建任务：设置数据库 schema、创建 API endpoints（依赖 schema）、编写测试（依赖 endpoints）、编写文档（依赖 schema）`
+2. `列出所有任务和状态`
+3. `认领第一个未被阻塞的任务并完成它`
+4. `再次列出任务，哪些任务现在被解锁了？`
+
+预期观察：
+
+- 控制台出现 `Tool> create_task`、`Tool> list_tasks`、`Tool> claim_task`、`Tool> complete_task`。
+- `.tasks/` 目录下生成多个 `task_*.json` 文件。
+- 完成 schema 任务后，依赖 schema 的 API endpoints 和 docs 会出现在 `Unblocked:` 中。
+
+### 源码注释补充
+
+本章为任务核心类补充了中文注释，重点解释为什么存储层不处理状态机、为什么缺失依赖也视为 blocked，以及为什么任务工具只做参数转换和服务调用。
+
+### 提示词位置调整
+
+本章将 system prompt 放在 `S10TaskSystemDemo` 顶部的 `SYSTEM_PROMPT` 静态变量中，内容对齐参考实现的三段：身份、可用工具、工作目录。
