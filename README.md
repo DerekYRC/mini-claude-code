@@ -30,6 +30,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s08 Context Compact
 - s09 Memory
 - s10 Task System
+- s11 Background Tasks
 
 ## 分支学习
 
@@ -45,6 +46,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s08-context-compact`
 - `s09-memory`
 - `s10-task-system`
+- `s11-background-tasks`
 
 切换示例：
 
@@ -217,6 +219,22 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S10TaskSystemD
 4. `再次列出任务，哪些任务现在被解锁了？`
 
 观察重点：`.tasks/` 目录下是否生成 JSON 文件；完成任务后，被阻塞的任务是否解锁。
+
+## 运行 s11
+
+s11 在 s10 任务系统基础上加入后台执行：慢操作扔到 daemon 线程，Agent 立刻拿到占位结果继续跑循环。后台完成后，通知自动注入下一轮对话。
+
+```sh
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S11BackgroundTasksDemo
+```
+
+试试这些 prompt：
+
+1. `后台运行 pip list，同时查找当前目录中的所有 Python 文件`
+2. `使用 run_in_background 运行 npm install，在等待的同时读取 package.json`
+3. `创建一个设置项目的任务，然后在后台运行 pip list`
+
+观察重点：慢操作是否被送到后台？是否出现 `[background] dispatched bg_0001`？后台完成后是否注入 `<task_notification>`？
 
 ## 参考项目
 

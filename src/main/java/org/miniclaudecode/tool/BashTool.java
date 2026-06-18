@@ -25,11 +25,12 @@ public class BashTool implements Tool {
 	/*
 	 * {
 	 *   "name": "bash",
-	 *   "description": "Run a shell command and return stdout/stderr",
+	 *   "description": "Run a shell command. Set run_in_background=true for slow commands.",
 	 *   "input_schema": {
 	 *     "type": "object",
 	 *     "properties": {
-	 *       "command": {"type": "string", "description": "Shell command to run"}
+	 *       "command": {"type": "string", "description": "Shell command to run"},
+	 *       "run_in_background": {"type": "boolean", "description": "Run in background for slow commands"}
 	 *     },
 	 *     "required": ["command"]
 	 *   }
@@ -40,12 +41,16 @@ public class BashTool implements Tool {
 		JSONObject properties = new JSONObject()
 				.fluentPut("command", new JSONObject()
 						.fluentPut("type", "string")
-						.fluentPut("description", "Shell command to run"));
+						.fluentPut("description", "Shell command to run"))
+				.fluentPut("run_in_background", new JSONObject()
+						.fluentPut("type", "boolean")
+						.fluentPut("description", "Run in background for slow commands"));
 		JSONObject schema = new JSONObject()
 				.fluentPut("type", "object")
 				.fluentPut("properties", properties)
 				.fluentPut("required", new JSONArray().fluentAdd("command"));
-		return new ToolDefinition("bash", "Run a shell command and return stdout/stderr", schema);
+		return new ToolDefinition("bash",
+				"Run a shell command. Set run_in_background=true for slow commands.", schema);
 	}
 
 	@Override
