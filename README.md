@@ -60,7 +60,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 再运行 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s01.S01AgentLoopDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S01AgentLoopDemo
 ```
 
 试试这些 prompt：
@@ -76,7 +76,7 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 s02 在 s01 基础上加入 `ToolRegistry`，并注册 `bash/read_file/write_file/edit_file/glob` 五个工具。
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s02.S02ToolDispatchDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S02ToolDispatchDemo
 ```
 
 试试这些 prompt：
@@ -93,7 +93,7 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 s03 在工具执行前加入权限管线：硬阻止列表、规则匹配、用户确认。
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s03.S03PermissionDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S03PermissionDemo
 ```
 
 试试这些 prompt：
@@ -110,7 +110,7 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 s04 把权限、日志、输出检查、停止统计挂到 Hook 上，主循环只负责触发事件。
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s04.S04HooksDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S04HooksDemo
 ```
 
 试试这些 prompt：
@@ -126,7 +126,7 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 s05 加入 `todo_write` 工具，让 Agent 在多步骤任务前先写计划，并在执行中更新状态。
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s05.S05TodoDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S05TodoDemo
 ```
 
 试试这些 prompt：
@@ -142,7 +142,7 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 s06 加入 `task` 工具，让父 Agent 把复杂子任务交给一个干净上下文的子 Agent。子 Agent 不注册 `task`，只返回最终摘要。
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s06.S06SubagentDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S06SubagentDemo
 ```
 
 试试这些 prompt：
@@ -158,7 +158,7 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 s07 启动时扫描 `skills/*/SKILL.md`，只把技能名和一句描述放进 system prompt。模型需要细节时调用 `load_skill`，通过 tool_result 注入 `<skill name="...">正文</skill>`。
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s07.S07SkillLoadingDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S07SkillLoadingDemo
 ```
 
 试试这些 prompt：
