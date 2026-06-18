@@ -91,7 +91,7 @@ export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
 export MODEL_ID='deepseek-v4-pro'
 export ANTHROPIC_API_KEY='你的 API Key'
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s01.S01AgentLoopDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDemo
 ```
 
 真实 API smoke test：
@@ -215,7 +215,7 @@ export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
 export MODEL_ID='deepseek-v4-pro'
 export ANTHROPIC_API_KEY='你的 API Key'
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s02.S02ToolDispatchDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S02ToolDispatchDemo
 ```
 
 真实 API smoke test：
@@ -283,7 +283,7 @@ export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
 export MODEL_ID='deepseek-v4-pro'
 export ANTHROPIC_API_KEY='你的 API Key'
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s03.S03PermissionDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S03PermissionDemo
 ```
 
 真实 API smoke test：
@@ -367,7 +367,7 @@ export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
 export MODEL_ID='deepseek-v4-pro'
 export ANTHROPIC_API_KEY='你的 API Key'
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s04.S04HooksDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S04HooksDemo
 ```
 
 真实 API smoke test：
@@ -456,7 +456,7 @@ export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
 export MODEL_ID='deepseek-v4-pro'
 export ANTHROPIC_API_KEY='你的 API Key'
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s05.S05TodoDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S05TodoDemo
 ```
 
 真实 API smoke test：
@@ -524,7 +524,7 @@ export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
 export MODEL_ID='deepseek-v4-pro'
 export ANTHROPIC_API_KEY='你的 API Key'
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s06.S06SubagentDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S06SubagentDemo
 ```
 
 真实 API smoke test：
@@ -591,7 +591,7 @@ export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
 export MODEL_ID='deepseek-v4-pro'
 export ANTHROPIC_API_KEY='你的 API Key'
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s07.S07SkillLoadingDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S07SkillLoadingDemo
 ```
 
 真实 API smoke test：
@@ -683,7 +683,7 @@ export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
 export MODEL_ID='deepseek-v4-pro'
 export ANTHROPIC_API_KEY='你的 API Key'
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s08.S08ContextCompactDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S08ContextCompactDemo
 ```
 
 真实 API smoke test：
@@ -780,7 +780,7 @@ export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
 export MODEL_ID='deepseek-v4-pro'
 export ANTHROPIC_API_KEY='你的 API Key'
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.s09.S09MemoryDemo
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S09MemoryDemo
 ```
 
 真实 API smoke test：
