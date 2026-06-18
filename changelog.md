@@ -463,15 +463,11 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S05TodoDemo
 
 ### 源码注释补充
 
-本章为核心源码补充了中文注释，重点解释本章机制挂载在 Agent 循环中的位置、新增类的职责边界，以及为了保持教学最小化而刻意没有实现的能力。
-
-同时移除了 `AnthropicConfig.timeoutMillis`，保持 LLM 配置只包含本章需要理解的字段。
+本章为核心源码补充了中文注释，重点解释 `todo_write` 工具如何在不修改 Agent 循环的前提下为模型提供计划能力。
 
 ### 提示词位置调整
 
 本章将 system prompt 作为 `S05TodoDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词内容保持参考项目的计划约束。
-
-`AnthropicConfig` 不再提供 `systemPrompt(String workdir)` 默认提示词方法，只负责保存调用真实 API 所需的配置字段。
 
 ## s06：大任务拆小，每个小任务干净的上下文
 
