@@ -56,7 +56,7 @@ mvn -q dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 再运行 demo：
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s01.S01AgentLoopDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S01AgentLoopDemo
 ```
 
 试试这些 prompt：
@@ -72,7 +72,7 @@ java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s0
 s02 在 s01 基础上加入 `ToolRegistry`，并注册 `bash/read_file/write_file/edit_file/glob` 五个工具。
 
 ```sh
-java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.s02.S02ToolDispatchDemo
+java -cp "target/classes:$(cat target/classpath.txt)" org.miniclaudecode.demo.S02ToolDispatchDemo
 ```
 
 试试这些 prompt：
