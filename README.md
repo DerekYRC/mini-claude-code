@@ -31,6 +31,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s09 Memory
 - s10 Task System
 - s11 Background Tasks
+- s12 Cron Scheduler
 
 ## 分支学习
 
@@ -47,6 +48,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s09-memory`
 - `s10-task-system`
 - `s11-background-tasks`
+- `s12-cron-scheduler`
 
 切换示例：
 
@@ -235,6 +237,23 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S11BackgroundT
 3. `创建一个设置项目的任务，然后在后台运行 pip list`
 
 观察重点：慢操作是否被送到后台？是否出现 `[background] dispatched bg_0001`？后台完成后是否注入 `<task_notification>`？
+
+## 运行 s12
+
+s12 加入 cron 定时调度：即使没有用户输入，Agent 也能按 cron 表达式自动触发一轮工作。支持周期/一次性任务，durable 任务持久化到 `.scheduled_tasks.json`。
+
+```sh
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S12CronSchedulerDemo
+```
+
+试试这些 prompt：
+
+1. `安排一个任务，每 2 分钟打印当前日期`
+2. `列出所有 cron jobs`
+3. `创建一个 1 分钟后的一次性提醒，用来检查构建状态`
+4. `取消这个周期性任务，并用 list_crons 确认`
+
+观察重点：是否出现 `[cron register]` 和 `[cron fire]`？定时触发后是否注入 `[Scheduled]` 并运行 Agent？`.scheduled_tasks.json` 是否生成？
 
 ## 参考项目
 

@@ -4,7 +4,7 @@
 
 ## 阶段一：基础 Agent Harness
 
-阶段一包含 s01-s11：
+阶段一包含 s01-s12：
 
 - s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
 - s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
@@ -17,6 +17,7 @@
 - s09 Memory：记住该记的，忘掉该忘的，分支 `s09-memory`
 - s10 Task System：大目标拆成小任务，排好序，持久化，分支 `s10-task-system`
 - s11 Background Tasks：慢操作丢后台，agent 继续思考，分支 `s11-background-tasks`
+- s12 Cron Scheduler：定时触发，不需要人推，分支 `s12-cron-scheduler`
 
 ## s01：One loop & Bash is all you need
 
@@ -1048,3 +1049,88 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S11BackgroundT
 ### 提示词位置调整
 
 本章将 system prompt 作为 `S11BackgroundTasksDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词中明确告知模型 bash 工具有可选的 `run_in_background` 参数。
+
+## s12：定时触发，不需要人推
+
+**教学分支：** `s12-cron-scheduler`
+
+本章解决的问题是：Agent 只有在用户输入时才会工作。如果想让 Agent 每天早上 9 点自动检查构建状态呢？最小解法是用 cron 表达式定义触发时间，到点自动注入 `[Scheduled]` 消息并运行 Agent。
+
+本章对齐 `learn-claude-code/s14_cron_scheduler`。
+
+### 核心变化
+
+s12 在 s11 后台任务基础上新增定时触发源：
+
+```text
+schedule_cron("* * * * *", "检查构建")
+  → CronScheduler.schedule()
+  → Hutool CronUtil 定时触发
+  → CronTask.execute()
+  → onFire callback
+  → agentLock 内注入 [Scheduled] 消息
+  → BackgroundAgentLoop.run()
+```
+
+### 本章新增
+
+- `CronJob`：cron 任务数据类（id、cron、prompt、recurring、durable）。
+- `CronStore`：只负责 `.scheduled_tasks.json` 读写，只保存 durable=true 的任务。
+- `CronScheduler`：委托 Hutool CronUtil 注册/取消任务，触发时回调 `Consumer<CronJob>`。两层 cron 校验：5 段式检查 + `CronPattern.of()` 解析。
+- `ScheduleCronTool`、`ListCronsTool`、`CancelCronTool`：三个 cron 工具。
+- `S12CronSchedulerDemo`：注册 11 个工具（s11 的 8 个 + 3 个 cron 工具），用 `agentLock` 保护共享 history，cron 触发和用户输入不能同时运行 Agent。
+
+### 设计选择
+
+采用 Hutool CronUtil + Map 方案（方案 C），不引入新依赖、不自写 cron 解析、不写队列和 queue processor。
+
+### 持久化
+
+durable job 写入 `.scheduled_tasks.json`：
+
+```json
+[
+  {
+    "id": "cron_49c8c6",
+    "cron": "* * * * *",
+    "prompt": "DURABLE_OK",
+    "recurring": true,
+    "durable": true
+  }
+]
+```
+
+启动时从文件加载并重新注册到 Hutool，恢复定时触发。
+
+### 验证
+
+启动命令：
+
+```sh
+git switch s12-cron-scheduler
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S12CronSchedulerDemo
+```
+
+真实 API smoke test，试试这些 prompt：
+
+1. `安排一个任务，每 2 分钟打印当前日期`
+2. `列出所有 cron jobs`
+3. `创建一个 1 分钟后的一次性提醒，用来检查构建状态`
+4. `取消这个周期性任务，并用 list_crons 确认`
+
+观察重点：
+- 是否出现 `[cron register]` 和 `[cron fire]`？
+- cron 到点后即使没有新用户输入，是否自动注入 `[Scheduled]` 并运行 Agent？
+- durable job 是否写入并从 `.scheduled_tasks.json` 恢复？
+- cancel 后是否出现 `[cron cancel]`？
+
+### 源码注释补充
+
+本章为核心源码补充了中文注释，重点解释 Hutool CronUtil 的委托关系、为什么验证分 5 段检查 + CronPattern 解析两层、以及为什么 cron 触发和用户输入需要用 agentLock 串行化。
+
+### 提示词位置调整
+
+本章将 system prompt 作为 `S12CronSchedulerDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词中新增 cron 三个工具的说明。
