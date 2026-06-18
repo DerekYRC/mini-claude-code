@@ -1,19 +1,22 @@
-package org.miniclaudecode.demo.s06;
+package org.miniclaudecode.demo;
 
-import org.miniclaudecode.core.AgentLoop;
+import org.miniclaudecode.compact.CompactionPipeline;
 import org.miniclaudecode.core.AgentLoopListener;
 import org.miniclaudecode.core.AssistantMessage;
+import org.miniclaudecode.core.CompactingAgentLoop;
 import org.miniclaudecode.core.ContentBlock;
 import org.miniclaudecode.core.Message;
 import org.miniclaudecode.core.TextBlock;
 import org.miniclaudecode.core.ToolUseBlock;
 import org.miniclaudecode.llm.AnthropicConfig;
 import org.miniclaudecode.llm.AnthropicLlmClient;
+import org.miniclaudecode.skill.SkillRegistry;
 import org.miniclaudecode.tool.BashTool;
+import org.miniclaudecode.tool.CompactTool;
 import org.miniclaudecode.tool.EditFileTool;
 import org.miniclaudecode.tool.GlobTool;
+import org.miniclaudecode.tool.LoadSkillTool;
 import org.miniclaudecode.tool.ReadFileTool;
-import org.miniclaudecode.tool.TaskTool;
 import org.miniclaudecode.tool.ToolRegistry;
 import org.miniclaudecode.tool.ToolResult;
 import org.miniclaudecode.tool.WriteFileTool;
@@ -24,31 +27,33 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * s06 启动入口：父 Agent 拥有 task 工具，子 Agent 只拥有基础工具。
+ * s08 启动入口：在 LLM 前挂上四层压缩管线，并把 compact 做成控制工具。
  */
-public class S06SubagentDemo {
+public class S08ContextCompactDemo {
 
-	// 父 Agent 可以使用 task 工具把复杂子问题委托出去。
-	private static final String PARENT_SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
-			+ ". For complex sub-problems, use the task tool to spawn a subagent.";
-
-	// 子 Agent 不注册 task 工具，提示词也明确禁止继续委托。
-	private static final String SUBAGENT_SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
-			+ ". Complete the task you were given, then return a concise summary. Do not delegate further.";
+	private static final String SYSTEM_PROMPT = "You are a coding agent at " + System.getProperty("user.dir")
+			+ ". Use tools to solve tasks. "
+			+ "Use compact when the conversation is getting long or the user asks you to compact. "
+			+ "Act, don't explain.";
 
 	public static void main(String[] args) {
 		File workdir = new File(".");
+		SkillRegistry skillRegistry = new SkillRegistry(new File(workdir, "skills"));
 
-		AnthropicConfig parentConfig = config(PARENT_SYSTEM_PROMPT);
-		AnthropicConfig subConfig = config(SUBAGENT_SYSTEM_PROMPT);
+		AnthropicConfig config = config(SYSTEM_PROMPT);
+		AnthropicLlmClient client = new AnthropicLlmClient(config);
 
-		// 子工具池不包含 task，避免子 Agent 递归创建更多子 Agent。
-		ToolRegistry subTools = baseTools(workdir);
-		// 父工具池包含 task，用来把复杂子任务委托给干净上下文的子 Agent。
-		ToolRegistry parentTools = baseTools(workdir)
-				.register(new TaskTool(new AnthropicLlmClient(subConfig), subTools));
+		ToolRegistry registry = new ToolRegistry()
+				.register(new BashTool(workdir))
+				.register(new ReadFileTool(workdir))
+				.register(new WriteFileTool(workdir))
+				.register(new EditFileTool(workdir))
+				.register(new GlobTool(workdir))
+				.register(new LoadSkillTool(skillRegistry))
+				.register(new CompactTool());
 
-		AgentLoop loop = new AgentLoop(new AnthropicLlmClient(parentConfig), parentTools, new AgentLoopListener() {
+		CompactionPipeline pipeline = new CompactionPipeline(workdir, client);
+		CompactingAgentLoop loop = new CompactingAgentLoop(client, registry, pipeline, new AgentLoopListener() {
 			@Override
 			public void beforeToolUse(ToolUseBlock toolUse) {
 				System.out.println("Tool> " + toolUse.getName() + " " + toolUse.getInput());
@@ -60,13 +65,13 @@ public class S06SubagentDemo {
 			}
 		});
 
-		System.out.println("s06: Subagent");
+		System.out.println("s08: Context Compact");
 		System.out.println("输入问题，回车发送。输入 q 退出。\n");
 
 		List<Message> history = new ArrayList<>();
 		Scanner scanner = new Scanner(System.in);
 		while (true) {
-			System.out.print("s06 >> ");
+			System.out.print("s08 >> ");
 			if (!scanner.hasNextLine()) {
 				break;
 			}
@@ -84,15 +89,6 @@ public class S06SubagentDemo {
 			}
 			System.out.println();
 		}
-	}
-
-	private static ToolRegistry baseTools(File workdir) {
-		return new ToolRegistry()
-				.register(new BashTool(workdir))
-				.register(new ReadFileTool(workdir))
-				.register(new WriteFileTool(workdir))
-				.register(new EditFileTool(workdir))
-				.register(new GlobTool(workdir));
 	}
 
 	private static AnthropicConfig config(String systemPrompt) {
