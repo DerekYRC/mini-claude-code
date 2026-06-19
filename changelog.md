@@ -4,7 +4,7 @@
 
 ## 阶段一：基础 Agent Harness
 
-阶段一包含 s01-s12：
+阶段一包含 s01-s13：
 
 - s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
 - s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
@@ -18,6 +18,7 @@
 - s10 Task System：大目标拆成小任务，排好序，持久化，分支 `s10-task-system`
 - s11 Background Tasks：慢操作丢后台，agent 继续思考，分支 `s11-background-tasks`
 - s12 Cron Scheduler：定时触发，不需要人推，分支 `s12-cron-scheduler`
+- s13 Agent Teams：一个搞不定，组队来，分支 `s13-agent-teams`
 
 ## s01：One loop & Bash is all you need
 
@@ -1134,3 +1135,79 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S12CronSchedul
 ### 提示词位置调整
 
 本章将 system prompt 作为 `S12CronSchedulerDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词中新增 cron 三个工具的说明。
+
+## s13：一个搞不定，组队来
+
+**教学分支：** `s13-agent-teams`
+
+本章解决的问题是：复杂任务拆成多个方向时，一个 Agent 的上下文和注意力不够用。最小解法是让 Lead 启动队友线程，队友在自己的上下文里干活，再通过文件邮箱把结果发回来。
+
+本章对齐 `learn-claude-code/s15_agent_teams` 的教学代码。
+
+### 核心变化
+
+```text
+Lead: spawn_teammate("alice", "backend developer", "创建 schema.sql")
+  → SpawnTeammateTool 启动 daemon 线程
+  → alice 使用 s13 专用队友小 loop 和简化工具集
+  → 每轮 LLM 调用前读取 .mailboxes/alice.jsonl
+  → Lead send_message("alice", "后续指令") 后 alice 下一轮注入 <inbox>...</inbox>
+  → alice send_message("lead", "结果摘要")
+  → MessageBus 追加 .mailboxes/lead.jsonl
+  → Lead check_inbox 或每轮结束后的 inbox 注入看到结果
+```
+
+### 本章新增
+
+- `TeamMessage`：文件邮箱消息数据类（from、to、type、content、timestamp）。
+- `MessageBus`：文件邮箱，每个 Agent 一个 `.mailboxes/{agent}.jsonl`，读取后删除表示消费。
+- `SpawnTeammateTool`：启动队友 daemon 线程，使用内存 `activeTeammates` 防止同名队友重复运行。
+- `SendMessageTool`：向指定 Agent 的邮箱写消息。
+- `CheckInboxTool`：消费当前 Agent 的 inbox。
+- `S13AgentTeamsDemo`：注册 s12 工具 + 3 个团队工具，Lead 每轮后检查 inbox 并注入 history。
+- 队友不注册 `check_inbox`；队友 inbox 由 harness 在每轮模型调用前自动注入，对齐 `learn-claude-code/s15_agent_teams` 的 `spawn_teammate_thread`。
+
+### 设计选择
+
+本章参照参考项目教学版，不持久化队友元数据，不恢复队友线程。持久化痕迹只有 `.mailboxes/*.jsonl`，队友运行状态只保存在当前进程内的 `activeTeammates`。
+
+### 验证
+
+启动命令：
+
+```sh
+git switch s13-agent-teams
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S13AgentTeamsDemo
+```
+
+真实 API smoke test，试试这些 prompt：
+
+1. `启动 alice 作为后端开发，让她创建一个名为 schema.sql 的文件，里面包含 users 表。`
+2. `检查收件箱，看看 alice 的结果。`
+3. `启动 bob 作为测试人员，让他检查 schema.sql 是否存在，并列出内容。`
+4. `启动 alice 作为后端开发，让她先用 bash 执行 sleep 45 && echo ready，然后根据 Lead 的后续消息行动，不要在收到后续消息前创建文件。`
+5. `给 alice 发送消息：请创建 teammate-inbox.txt，内容写“我收到了 Lead 的消息”。`
+6. `检查收件箱，确认 alice 汇报她已经根据后续消息完成任务。`
+
+观察重点：
+
+- Lead 是否调用 `spawn_teammate`？
+- 是否出现 `[teammate] alice spawned as ...`？
+- Lead 是否在 alice sleep 期间发送后续消息？
+- Lead 给队友发后续消息时，是否出现 `[bus] lead -> alice`？
+- sleep 结束进入下一轮前，是否出现 `[teammate inbox] alice`？
+- 队友是否通过 `[bus] alice -> lead` 把结果写入文件邮箱？
+- `check_inbox` 是否能读到队友消息？
+- `teammate-inbox.txt` 是否由队友根据后续消息创建？
+- `.mailboxes/` 中的 JSONL 是否可观察？
+
+### 源码注释补充
+
+本章为核心源码补充了中文注释，重点解释文件邮箱的消费式读取、`activeTeammates` 的进程内生命周期，以及为什么队友只使用简化工具集。
+
+### 提示词位置调整
+
+本章将 Lead 和 Teammate 的 system prompt 都放在 `S13AgentTeamsDemo` 顶部静态变量中，方便对照学习。

@@ -32,6 +32,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s10 Task System
 - s11 Background Tasks
 - s12 Cron Scheduler
+- s13 Agent Teams
 
 ## 分支学习
 
@@ -49,6 +50,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s10-task-system`
 - `s11-background-tasks`
 - `s12-cron-scheduler`
+- `s13-agent-teams`
 
 切换示例：
 
@@ -254,6 +256,26 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S12CronSchedul
 4. `取消这个周期性任务，并用 list_crons 确认`
 
 观察重点：是否出现 `[cron register]` 和 `[cron fire]`？定时触发后是否注入 `[Scheduled]` 并运行 Agent？`.scheduled_tasks.json` 是否生成？
+
+## 运行 s13
+
+s13 加入 Agent Teams：Lead 可以启动队友线程，队友用自己的上下文工作，并通过 `.mailboxes/*.jsonl` 文件邮箱把结果发回来。
+队友每轮调用模型前会自动读取自己的 inbox，所以 Lead 可以在队友运行中继续发消息，后续指令会注入队友下一轮上下文。
+
+```sh
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S13AgentTeamsDemo
+```
+
+试试这些 prompt：
+
+1. `启动 alice 作为后端开发，让她创建一个名为 schema.sql 的文件，里面包含 users 表。`
+2. `检查收件箱，看看 alice 的结果。`
+3. `启动 bob 作为测试人员，让他检查 schema.sql 是否存在，并列出内容。`
+4. `启动 alice 作为后端开发，让她先用 bash 执行 sleep 45 && echo ready，然后根据 Lead 的后续消息行动，不要在收到后续消息前创建文件。`
+5. `给 alice 发送消息：请创建 teammate-inbox.txt，内容写“我收到了 Lead 的消息”。`
+6. `检查收件箱，确认 alice 汇报她已经根据后续消息完成任务。`
+
+观察重点：是否出现 `[teammate] alice spawned`？`.mailboxes/` 目录下的 JSONL 文件长什么样？Lead 是否在 alice sleep 期间发送后续消息？sleep 结束进入下一轮前是否触发 `[teammate inbox] alice`？队友完成后 Lead 的 inbox 是否注入 history？
 
 ## 参考项目
 
