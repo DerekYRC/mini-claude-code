@@ -11,11 +11,17 @@ public class ClaimTaskTool implements Tool {
 
 	private final TaskService taskService;
 
+	private final String defaultOwner;
+
 	public ClaimTaskTool(TaskService taskService) {
-		this.taskService = taskService;
+		this(taskService, null);
 	}
 
-	@Override
+	public ClaimTaskTool(TaskService taskService, String defaultOwner) {
+		this.taskService = taskService;
+		this.defaultOwner = defaultOwner;
+	}
+
 	/*
 	 * {
 	 *   "name": "claim_task",
@@ -23,17 +29,16 @@ public class ClaimTaskTool implements Tool {
 	 *   "input_schema": {
 	 *     "type": "object",
 	 *     "properties": {
-	 *       "task_id": {"type": "string"},
-	 *       "owner": {"type": "string"}
+	 *       "task_id": {"type": "string"}
 	 *     },
 	 *     "required": ["task_id"]
 	 *   }
 	 * }
 	 */
+	@Override
 	public ToolDefinition getDefinition() {
 		JSONObject properties = new JSONObject()
-				.fluentPut("task_id", new JSONObject().fluentPut("type", "string"))
-				.fluentPut("owner", new JSONObject().fluentPut("type", "string"));
+				.fluentPut("task_id", new JSONObject().fluentPut("type", "string"));
 		JSONObject schema = new JSONObject()
 				.fluentPut("type", "object")
 				.fluentPut("properties", properties)
@@ -46,8 +51,13 @@ public class ClaimTaskTool implements Tool {
 	@Override
 	public ToolResult execute(JSONObject input) {
 		try {
+			String taskId = input == null ? null : input.getString("task_id");
 			String owner = input == null ? null : input.getString("owner");
-			return new ToolResult(taskService.claimTask(input == null ? null : input.getString("task_id"), owner));
+			// 队友侧工具由 harness 注入队友名，避免模型把任务认领给错误身份。
+			if (defaultOwner != null && !defaultOwner.isBlank()) {
+				owner = defaultOwner;
+			}
+			return new ToolResult(taskService.claimTask(taskId, owner));
 		}
 		catch (RuntimeException e) {
 			return new ToolResult("Error: " + e.getMessage());

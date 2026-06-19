@@ -34,6 +34,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s12 Cron Scheduler
 - s13 Agent Teams
 - s14 Team Protocols
+- s15 Autonomous Agents
 
 ## 分支学习
 
@@ -53,6 +54,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s12-cron-scheduler`
 - `s13-agent-teams`
 - `s14-team-protocols`
+- `s15-autonomous-agents`
 
 切换示例：
 
@@ -293,6 +295,21 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S14TeamProtoco
 2. `启动 bob，任务是重构认证模块。让他先提交计划。然后审查并批准它。`
 
 观察重点：关机握手是否完整（请求 → 确认 → 关机）？`request_id` 是否在请求和响应之间保持一致？队友 idle 后是否能收到 `shutdown_request`？
+
+## 运行 s15
+
+s15 在队友协议基础上加入 Autonomous Agents：队友空闲时自己扫描任务看板，发现 pending、无 owner、依赖已完成的任务后自动认领并继续工作。
+
+```sh
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S15AutonomousAgentsDemo
+```
+
+试试这些 prompt：
+
+1. `在任务板上创建 3 个任务，然后启动 alice 和 bob。观察他们自动认领并工作。`
+2. `创建三个任务：先创建 schema，再创建 API（依赖 schema），最后创建测试（依赖 API）。启动 alice 和 bob，让他们自己认领并完成任务。`
+
+观察重点：队友是否自动认领未分配任务？有 `blockedBy` 依赖的任务是否在前置完成后被认领？任务 owner 是否是队友名？空闲 60 秒后是否自动退出？IDLE 阶段收到 `shutdown_request` 是否立即响应？
 
 ## 参考项目
 

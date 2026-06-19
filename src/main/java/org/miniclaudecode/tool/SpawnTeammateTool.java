@@ -12,6 +12,8 @@ import org.miniclaudecode.llm.AnthropicConfig;
 import org.miniclaudecode.llm.AnthropicLlmClient;
 import org.miniclaudecode.llm.LlmClient;
 import org.miniclaudecode.protocol.ProtocolService;
+import org.miniclaudecode.task.TaskRecord;
+import org.miniclaudecode.task.TaskService;
 import org.miniclaudecode.team.MessageBus;
 import org.miniclaudecode.team.TeamMessage;
 
@@ -30,11 +32,17 @@ public class SpawnTeammateTool implements Tool {
 
     private static final int MAX_TEAMMATE_TURNS = 10;
 
+    private static final int IDLE_POLL_INTERVAL_MILLIS = 5000;
+
+    private static final int IDLE_TIMEOUT_MILLIS = 60000;
+
     private static final int INBOX_NONE = 0;
 
     private static final int INBOX_CONTINUE = 1;
 
     private static final int INBOX_SHUTDOWN = 2;
+
+    private static final int IDLE_TIMEOUT = 3;
 
     private final File workdir;
 
@@ -50,15 +58,23 @@ public class SpawnTeammateTool implements Tool {
 
     private final ProtocolService protocol;
 
+    private final TaskService taskService;
+
     private final Set<String> activeTeammates = ConcurrentHashMap.newKeySet();
 
     public SpawnTeammateTool(File workdir, MessageBus bus, String baseUrl,
             String apiKey, String model, String promptTemplate) {
-        this(workdir, bus, baseUrl, apiKey, model, promptTemplate, null);
+        this(workdir, bus, baseUrl, apiKey, model, promptTemplate, null, null);
     }
 
     public SpawnTeammateTool(File workdir, MessageBus bus, String baseUrl,
             String apiKey, String model, String promptTemplate, ProtocolService protocol) {
+        this(workdir, bus, baseUrl, apiKey, model, promptTemplate, protocol, null);
+    }
+
+    public SpawnTeammateTool(File workdir, MessageBus bus, String baseUrl,
+            String apiKey, String model, String promptTemplate, ProtocolService protocol,
+            TaskService taskService) {
         this.workdir = workdir;
         this.bus = bus;
         this.baseUrl = baseUrl;
@@ -66,6 +82,7 @@ public class SpawnTeammateTool implements Tool {
         this.model = model;
         this.promptTemplate = promptTemplate;
         this.protocol = protocol;
+        this.taskService = taskService;
     }
 
     /*
@@ -134,6 +151,11 @@ public class SpawnTeammateTool implements Tool {
             if (protocol != null) {
                 registry.register(new SubmitPlanTool(protocol, name));
             }
+            if (taskService != null) {
+                registry.register(new ListTasksTool(taskService))
+                        .register(new ClaimTaskTool(taskService, name))
+                        .register(new CompleteTaskTool(taskService));
+            }
             LlmClient client = new AnthropicLlmClient(config(String.format(promptTemplate,
                     name, role, workdir.getAbsolutePath())));
             AssistantMessage answer = protocol == null
@@ -183,28 +205,37 @@ public class SpawnTeammateTool implements Tool {
         messages.add(Message.user(prompt));
         AssistantMessage lastResponse = null;
 
-        for (int turn = 0; turn < MAX_TEAMMATE_TURNS; turn++) {
-            int inboxAction = injectTeammateInbox(name, messages);
-            if (inboxAction == INBOX_SHUTDOWN) {
-                return lastResponse;
-            }
-
-            AssistantMessage response = client.chat(messages, registry.definitions());
-            lastResponse = response;
-            messages.add(Message.assistant(response.getContent()));
-
-            List<ToolResultBlock> toolResults = executeToolUses(response, registry);
-            if (!"tool_use".equals(response.getStopReason()) || toolResults.isEmpty()) {
-                // s14 的关键差异：队友空闲后等待 inbox，而不是直接退出。
-                int idleAction = idleUntilMessage(name, messages);
-                if (idleAction == INBOX_SHUTDOWN) {
-                    return response;
+        while (true) {
+            boolean reachedTurnLimit = true;
+            for (int turn = 0; turn < MAX_TEAMMATE_TURNS; turn++) {
+                int inboxAction = injectTeammateInbox(name, messages);
+                if (inboxAction == INBOX_SHUTDOWN) {
+                    return lastResponse;
                 }
-                continue;
+
+                AssistantMessage response = client.chat(messages, registry.definitions());
+                lastResponse = response;
+                messages.add(Message.assistant(response.getContent()));
+
+                List<ToolResultBlock> toolResults = executeToolUses(response, registry);
+                if (!"tool_use".equals(response.getStopReason()) || toolResults.isEmpty()) {
+                    // 一个 WORK 阶段结束后进入 IDLE；有新消息或新任务时重新开始 WORK。
+                    int idleAction = idleAfterWork(name, messages);
+                    if (idleAction == INBOX_SHUTDOWN || idleAction == IDLE_TIMEOUT) {
+                        return response;
+                    }
+                    reachedTurnLimit = false;
+                    break;
+                }
+                messages.add(Message.toolResults(toolResults));
             }
-            messages.add(Message.toolResults(toolResults));
+            if (reachedTurnLimit) {
+                int idleAction = idleAfterWork(name, messages);
+                if (idleAction == INBOX_SHUTDOWN || idleAction == IDLE_TIMEOUT) {
+                    return lastResponse;
+                }
+            }
         }
-        return lastResponse;
     }
 
     private int injectTeammateInbox(String name, List<Message> messages) {
@@ -236,7 +267,7 @@ public class SpawnTeammateTool implements Tool {
 
     private int idleUntilMessage(String name, List<Message> messages) {
         while (true) {
-            sleepOneSecond();
+            sleep(1000);
             int inboxAction = injectTeammateInbox(name, messages);
             if (inboxAction != INBOX_NONE) {
                 return inboxAction;
@@ -244,14 +275,65 @@ public class SpawnTeammateTool implements Tool {
         }
     }
 
-    private void sleepOneSecond() {
+    private int idleAfterWork(String name, List<Message> messages) {
+        return taskService == null
+                ? idleUntilMessage(name, messages)
+                : idleUntilWork(name, messages);
+    }
+
+    private int idleUntilWork(String name, List<Message> messages) {
+        long deadline = System.currentTimeMillis() + IDLE_TIMEOUT_MILLIS;
+        while (System.currentTimeMillis() < deadline) {
+            sleep(IDLE_POLL_INTERVAL_MILLIS);
+
+            int inboxAction = injectTeammateInbox(name, messages);
+            if (inboxAction != INBOX_NONE) {
+                return inboxAction;
+            }
+
+            int taskAction = injectAutoClaimedTask(name, messages);
+            if (taskAction != INBOX_NONE) {
+                return taskAction;
+            }
+        }
+        System.out.println("  [idle] " + name + " timeout (60s)");
+        return IDLE_TIMEOUT;
+    }
+
+    private int injectAutoClaimedTask(String name, List<Message> messages) {
+        if (taskService == null) {
+            return INBOX_NONE;
+        }
+        List<TaskRecord> tasks = taskService.scanUnclaimedTasks();
+        for (TaskRecord task : tasks) {
+            String result = taskService.claimTask(task.getId(), name);
+            if (result.startsWith("Claimed ")) {
+                String content = "<auto-claimed>\n"
+                        + "Task " + task.getId() + ": " + task.getSubject() + "\n"
+                        + "Description: " + nullToEmpty(task.getDescription()) + "\n"
+                        + "</auto-claimed>";
+                messages.add(Message.user(content));
+                System.out.println("  [idle] " + name + " auto-claimed: "
+                        + task.getSubject());
+                return INBOX_CONTINUE;
+            }
+            System.out.println("  [idle] " + name + " claim failed: " + result);
+        }
+        return INBOX_NONE;
+    }
+
+    private void sleep(long millis) {
         try {
-            Thread.sleep(1000);
+            Thread.sleep(millis);
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Teammate interrupted", e);
         }
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private List<ToolResultBlock> executeToolUses(AssistantMessage response,
