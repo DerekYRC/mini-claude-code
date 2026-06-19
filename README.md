@@ -1,343 +1,91 @@
-# mini-claude-code
+# <img src="assets/cc.png" height="40" align="absmiddle"> mini-claude-code
 
-`mini-claude-code` 是一个 Java 版 Claude Code harness 学习项目。项目按章节拆解 Agent Harness 的核心机制，每章只保留理解当前机制所需的最小代码。
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/DerekYRC/mini-claude-code)
+[![Java](https://img.shields.io/badge/Java-17-4EB1BA.svg)](https://www.oracle.com/java/)
+[![Maven](https://img.shields.io/badge/build-Maven-C71A36.svg)](https://maven.apache.org/)
+[![Stars](https://img.shields.io/github/stars/DerekYRC/mini-claude-code)](https://img.shields.io/github/stars/DerekYRC/mini-claude-code)
+[![Forks](https://img.shields.io/github/forks/DerekYRC/mini-claude-code)](https://img.shields.io/github/forks/DerekYRC/mini-claude-code)
 
-## 环境变量
+## 关于
+
+**mini-claude-code** 是一个简化版的Java版 Claude Code 编程 Agent 项目，能帮助你快速理解编码 Agent 的核心原理。项目抽取了 Agent Harness 的关键机制，**代码尽量精简，保留核心功能**，如 Agent Loop、工具调用、权限控制、Hooks、Todo、Subagent、Skill Loading、上下文压缩、记忆系统、任务系统、后台任务、定时调度、多 Agent 协作、团队协议、自主认领任务和 MCP Plugin 等功能。
+
+项目按章节拆解一个编码 Agent 的核心机制，每章对应一个独立分支，并尽量保留理解当前机制所需的最小代码。
+
+如果本项目能帮助到你，请给个 **STAR**，谢谢！
+
+## 功能
+
+* [s01 Agent Loop](changelog.md#s01one-loop--bash-is-all-you-need)：一个工具 + 一个循环 = 一个 Agent
+* [s02 Tool Dispatch](changelog.md#s02加一个工具只加一个-handler)：加一个工具，只加一个 handler
+* [s03 Permission](changelog.md#s03先划边界再给自由)：先划边界，再给自由
+* [s04 Hooks](changelog.md#s04挂在循环上不写进循环里)：挂在循环上，不写进循环里
+* [s05 Todo](changelog.md#s05没有计划的-agent-走哪算哪)：没有计划的 agent 走哪算哪
+* [s06 Subagent](changelog.md#s06大任务拆小每个小任务干净的上下文)：大任务拆小，每个小任务干净的上下文
+* [s07 Skill Loading](changelog.md#s07用到时再加载别全塞-prompt-里)：用到时再加载，别全塞 prompt 里
+* [s08 Context Compact](changelog.md#s08上下文总会满要有办法腾地方)：上下文总会满，要有办法腾地方
+* [s09 Memory](changelog.md#s09记住该记的忘掉该忘的)：记住该记的，忘掉该忘的
+* [s10 Task System](changelog.md#s10task-system)：大目标拆成小任务，排好序，持久化
+* [s11 Background Tasks](changelog.md#s11background-tasks)：慢操作丢后台，agent 继续思考
+* [s12 Cron Scheduler](changelog.md#s12cron-scheduler)：定时触发，不需要人推
+* [s13 Agent Teams](changelog.md#s13agent-teams)：一个搞不定，组队来
+* [s14 Team Protocols](changelog.md#s14队友之间要有约定)：队友之间要有约定
+* [s15 Autonomous Agents](changelog.md#s15队友自己看板有活就认领)：队友自己看板，有活就认领
+* [s16 MCP Plugin](changelog.md#s16能力不够插上-mcp)：能力不够，插上 MCP
+
+## 使用方法
+
+### 1. 准备环境
+
+本项目需要 Java 17 和 Maven。
 
 运行真实模型 demo 前，先在 shell 中设置：
 
 ```sh
-export ANTHROPIC_BASE_URL="你的 Anthropic 兼容 API Base URL"
-export MODEL_ID="你的模型 ID"
-export ANTHROPIC_API_KEY="你的 API Key"
+export ANTHROPIC_BASE_URL='你的 Anthropic 兼容 API Base URL，如: https://api.deepseek.com/anthropic'
+export MODEL_ID='你的模型 ID'
+export ANTHROPIC_API_KEY='你的 API Key'
 ```
 
 不要把 API Key 写入仓库文件。
 
-所有章节都直接启动 demo 连接真实 Anthropic 兼容 API 进行验证，不再编写单元测试。不要把 API Key 写入仓库文件。
+### 2. 切换章节分支
 
-## 学习路线
-
-阶段一实现：
-
-- s01 Agent Loop
-- s02 Tool Dispatch
-- s03 Permission
-- s04 Hooks
-- s05 Todo
-- s06 Subagent
-- s07 Skill Loading
-- s08 Context Compact
-- s09 Memory
-- s10 Task System
-- s11 Background Tasks
-- s12 Cron Scheduler
-- s13 Agent Teams
-- s14 Team Protocols
-- s15 Autonomous Agents
-- s16 MCP Plugin
-
-## 分支学习
-
-每章对应一个教学分支：
-
-- `s01-agent-loop`
-- `s02-tool-dispatch`
-- `s03-permission`
-- `s04-hooks`
-- `s05-todo`
-- `s06-subagent`
-- `s07-skill-loading`
-- `s08-context-compact`
-- `s09-memory`
-- `s10-task-system`
-- `s11-background-tasks`
-- `s12-cron-scheduler`
-- `s13-agent-teams`
-- `s14-team-protocols`
-- `s15-autonomous-agents`
-- `s16-mcp-plugin`
-
-切换示例：
+每章对应一个教学分支。比如学习 s01：
 
 ```sh
 git switch s01-agent-loop
 ```
 
-详细讲解见 `changelog.md`。
+### 3. 启动 demo
 
-## 运行 s01
-
-运行 demo：
+使用 Maven 启动指定 demo：
 
 ```sh
 mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDemo
 ```
 
-试试这些 prompt：
+### 4. 阅读源码说明
 
-1. `创建一个名为 hello.py 的文件，内容是打印 "Hello, World!"`
-2. `列出当前目录中的所有 Python 文件`
-3. `当前 git 分支是什么？`
+阅读 [changelog.md](changelog.md)。
 
-观察重点：什么时候出现 `Tool> bash`，什么时候模型不再调用工具并结束循环。
+`changelog.md` 会按章节说明：
 
-## 运行 s02
+* 本章新增了哪些源码
+* 为什么这样设计
+* 和前一章相比变了什么
+* 如何启动真实 API demo
+* 可以尝试哪些 smoke test prompt
 
-s02 在 s01 基础上加入 `ToolRegistry`，并注册 `bash/read_file/write_file/edit_file/glob` 五个工具。
+## 提问
 
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S02ToolDispatchDemo
-```
+[点此提问](https://github.com/DerekYRC/mini-claude-code/issues)
 
-试试这些 prompt：
+## 贡献
 
-1. `读取 README.md，并告诉我这个项目是做什么的`
-2. `创建一个名为 test.py 的文件，内容是打印 "hello"，然后再读取它确认内容`
-3. `查找当前目录中的所有 Java 文件`
-4. `同时读取 README.md 和 pom.xml，然后创建一个 summary.md 总结文件`
-
-观察重点：模型什么时候只调一个工具，什么时候一次调多个工具；多个工具调用的顺序和结果是否正确。
-
-## 运行 s03
-
-s03 在工具执行前加入权限管线：硬阻止列表、规则匹配、用户确认。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S03PermissionDemo
-```
-
-试试这些 prompt：
-
-1. `在当前目录创建一个名为 test.txt 的文件`
-2. `删除 /tmp 目录中的所有临时文件`
-3. `当前目录里有哪些文件？`
-4. `尝试把一个文件写入 /etc/something`
-
-观察重点：哪些操作直接通过，哪些需要你确认，哪些会被直接拒绝。
-
-## 运行 s04
-
-s04 把权限、日志、输出检查、停止统计挂到 Hook 上，主循环只负责触发事件。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S04HooksDemo
-```
-
-试试这些 prompt：
-
-1. `读取 README.md`
-2. `创建一个名为 test.txt 的文件`
-3. `删除 /tmp 目录中的所有临时文件`
-
-观察重点：每次工具执行前是否出现 `[HOOK]` 日志；权限被拒时，是 hook 拦截的还是循环里硬编码的。
-
-## 运行 s05
-
-s05 加入 `todo_write` 工具，让 Agent 在多步骤任务前先写计划，并在执行中更新状态。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S05TodoDemo
-```
-
-试试这些 prompt：
-
-1. `重构 target/s05-example/hello.py：如果文件不存在，先创建一个简单 hello 函数，然后补充类型标注、docstring 和 main guard`
-2. `在 target/s05-example/demo_pkg 下创建一个 Python package，包含 __init__.py、utils.py 和 tests/test_utils.py`
-3. `检查 target/s05-example 下的 Python 文件，并修复明显的风格问题`
-
-观察重点：第一次工具调用是不是 `todo_write`；TODO 列了几步；执行过程中状态有没有从 `pending` 变成 `in_progress` / `completed`。
-
-## 运行 s06
-
-s06 加入 `task` 工具，让父 Agent 把复杂子任务交给一个干净上下文的子 Agent。子 Agent 不注册 `task`，只返回最终摘要。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S06SubagentDemo
-```
-
-试试这些 prompt：
-
-1. `使用一个子任务找出这个项目使用什么构建工具和测试框架`
-2. `委托子 Agent 读取 src/main/java/org/miniclaudecode/core 下的 Java 文件，并总结每个文件的作用`
-3. `用 task 创建 target/s06-example/string_tools.py，里面包含 slugify(text: str) 函数，然后由父 Agent 验证它`
-
-观察重点：是否出现 `[Subagent spawned]` / `[Subagent done]`；子 Agent 的工具调用是否以 `[sub] ...` 输出；父 Agent 最后是否只继续处理子 Agent 返回的摘要。
-
-## 运行 s07
-
-s07 启动时扫描 `skills/*/SKILL.md`，只把技能名和一句描述放进 system prompt。模型需要细节时调用 `load_skill`，通过 tool_result 注入 `<skill name="...">正文</skill>`。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S07SkillLoadingDemo
-```
-
-试试这些 prompt：
-
-1. `有哪些技能可用？`
-2. `加载 code-review 技能，并遵循它的说明`
-3. `我需要做一次代码审查，请先加载相关技能`
-
-观察重点：Agent 是否直接从 system prompt 里的目录知道有哪些技能；需要完整规范时是否出现 `Tool> load_skill`；加载后回答是否使用了对应 skill 的说明。
-
-## 运行 s08
-
-s08 在 LLM 前加入四层压缩管线，并把 `compact` 做成一个控制工具。大工具结果会先落盘，长历史会裁剪或摘要。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S08ContextCompactDemo
-```
-
-试试这些 prompt：
-
-1. `读取 README.md，然后读取 changelog.md，再读取 src/main/java/org/miniclaudecode/demo/s01/S01AgentLoopDemo.java`
-2. `读取 src/main/java/org/miniclaudecode/compact 下的每个文件`
-3. 反复对话 20 轮以上，观察是否出现 `[auto compact]` 或 `[reactive compact]`
-
-观察重点：每次工具执行后，旧 `tool_result` 是否被压缩；连续对话超过阈值时，是否保存 `.transcripts/` 并触发摘要。
-
-## 运行 s09
-
-s09 加入文件系统记忆：`MEMORY.md` 索引常驻 system prompt，相关记忆正文按需注入，每轮结束后提取新记忆。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S09MemoryDemo
-```
-
-试试这些 prompt（分多轮输入，观察记忆的累积和加载）：
-
-1. `我喜欢使用 tabs 缩进，而不是 spaces。请记住这一点。`
-2. `创建一个名为 test.py 的 Python 文件`
-3. `我之前告诉过你哪些偏好？`
-4. `我还喜欢字符串使用单引号，而不是双引号。`
-
-观察重点：每轮结束后是否出现 `[Memory: extracted N new memories]`；`.memory/` 目录下是否生成 `.md` 文件；`MEMORY.md` 索引是否更新；新一轮对话时 Agent 是否自动加载了之前的记忆。
-
-## 运行 s10
-
-s10 加入持久化任务系统：每个任务保存为 `.tasks/{id}.json`，任务之间用 `blockedBy` 表达依赖，只有依赖完成后才能认领下游任务。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S10TaskSystemDemo
-```
-
-试试这些 prompt：
-
-1. `创建任务：设置数据库 schema、创建 API endpoints（依赖 schema）、编写测试（依赖 endpoints）、编写文档（依赖 schema）`
-2. `列出所有任务和状态`
-3. `认领第一个未被阻塞的任务并完成它`
-4. `再次列出任务，哪些任务现在被解锁了？`
-
-观察重点：`.tasks/` 目录下是否生成 JSON 文件；完成任务后，被阻塞的任务是否解锁。
-
-## 运行 s11
-
-s11 在 s10 任务系统基础上加入后台执行：慢操作扔到 daemon 线程，Agent 立刻拿到占位结果继续跑循环。后台完成后，通知自动注入下一轮对话。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S11BackgroundTasksDemo
-```
-
-试试这些 prompt：
-
-1. `后台运行 pip list，同时查找当前目录中的所有 Python 文件`
-2. `使用 run_in_background 运行 npm install，在等待的同时读取 package.json`
-3. `创建一个设置项目的任务，然后在后台运行 pip list`
-
-观察重点：慢操作是否被送到后台？是否出现 `[background] dispatched bg_0001`？后台完成后是否注入 `<task_notification>`？
-
-## 运行 s12
-
-s12 加入 cron 定时调度：即使没有用户输入，Agent 也能按 cron 表达式自动触发一轮工作。支持周期/一次性任务，durable 任务持久化到 `.scheduled_tasks.json`。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S12CronSchedulerDemo
-```
-
-试试这些 prompt：
-
-1. `安排一个任务，每 2 分钟打印当前日期`
-2. `列出所有 cron jobs`
-3. `创建一个 1 分钟后的一次性提醒，用来检查构建状态`
-4. `取消这个周期性任务，并用 list_crons 确认`
-
-观察重点：是否出现 `[cron register]` 和 `[cron fire]`？定时触发后是否注入 `[Scheduled]` 并运行 Agent？`.scheduled_tasks.json` 是否生成？
-
-## 运行 s13
-
-s13 加入 Agent Teams：Lead 可以启动队友线程，队友用自己的上下文工作，并通过 `.mailboxes/*.jsonl` 文件邮箱把结果发回来。
-队友每轮调用模型前会自动读取自己的 inbox，所以 Lead 可以在队友运行中继续发消息，后续指令会注入队友下一轮上下文。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S13AgentTeamsDemo
-```
-
-试试这些 prompt：
-
-1. `启动 alice 作为后端开发，让她创建一个名为 schema.sql 的文件，里面包含 users 表。`
-2. `检查收件箱，看看 alice 的结果。`
-3. `启动 bob 作为测试人员，让他检查 schema.sql 是否存在，并列出内容。`
-4. `启动 alice 作为后端开发，让她先用 bash 执行 sleep 45 && echo ready，然后根据 Lead 的后续消息行动，不要在收到后续消息前创建文件。`
-5. `给 alice 发送消息：请创建 teammate-inbox.txt，内容写“我收到了 Lead 的消息”。`
-6. `检查收件箱，确认 alice 汇报她已经根据后续消息完成任务。`
-
-观察重点：是否出现 `[teammate] alice spawned`？`.mailboxes/` 目录下的 JSONL 文件长什么样？Lead 是否在 alice sleep 期间发送后续消息？sleep 结束进入下一轮前是否触发 `[teammate inbox] alice`？队友完成后 Lead 的 inbox 是否注入 history？
-
-## 运行 s14
-
-s14 在 Agent Teams 的文件邮箱上加入结构化协议：请求和响应通过 `request_id` 关联，并由 `ProtocolService` 维护 pending → approved/rejected 状态。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S14TeamProtocolsDemo
-```
-
-试试这些 prompt：
-
-1. `启动 alice 作为后端开发。让她创建一个文件。然后请求她关机。`
-2. `启动 bob，任务是重构认证模块。让他先提交计划。然后审查并批准它。`
-
-观察重点：关机握手是否完整（请求 → 确认 → 关机）？`request_id` 是否在请求和响应之间保持一致？队友 idle 后是否能收到 `shutdown_request`？
-
-## 运行 s15
-
-s15 在队友协议基础上加入 Autonomous Agents：队友空闲时自己扫描任务看板，发现 pending、无 owner、依赖已完成的任务后自动认领并继续工作。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S15AutonomousAgentsDemo
-```
-
-试试这些 prompt：
-
-1. `在任务板上创建 3 个任务，然后启动 alice 和 bob。观察他们自动认领并工作。`
-2. `创建三个任务：先创建 schema，再创建 API（依赖 schema），最后创建测试（依赖 API）。启动 alice 和 bob，让他们自己认领并完成任务。`
-
-观察重点：队友是否自动认领未分配任务？有 `blockedBy` 依赖的任务是否在前置完成后被认领？任务 owner 是否是队友名？空闲 60 秒后是否自动退出？IDLE 阶段收到 `shutdown_request` 是否立即响应？
-
-## 运行 s16
-
-s16 加入 MCP Plugin：Agent 先通过 `connect_mcp` 连接 mock MCP server，再把 server 发现到的工具加入同一个工具池。教学版提供 `time` 和 `weather` 两个 mock server，不启动真实 MCP 子进程，也不访问真实天气 API。
-
-```sh
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S16McpPluginDemo
-```
-
-试试这些 prompt：
-
-1. `连接 time MCP server，并告诉我当前时间。`
-2. `连接 weather MCP server，并查询 Shanghai 当前天气。`
-3. `同时连接 time 和 weather，告诉我现在有哪些 mcp__ 前缀工具可以用。`
-4. `连接 weather MCP server，然后查询 Hangzhou 和 San Francisco 的天气并做一个简短对比。`
-
-观察重点：连接 MCP server 后，是否出现 `mcp__time__get_current_time` 或 `mcp__weather__get_current_weather` 这类前缀工具？MCP 工具是否和内置工具走同一个 dispatch 流程？工具描述里是否标注 `(readOnly)`？
+欢迎 Pull Request。
 
 ## 参考项目
 
-本项目参考 [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)。
+- [learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)(强烈推荐)
 
-建议这样搭配学习：
-
-1. 先阅读 `learn-claude-code` 对应章节，理解 Claude Code harness 机制的设计动机。
-2. 再切换到 `mini-claude-code` 对应分支，阅读 Java 最小实现。
-3. 最后对照本项目 `changelog.md`，查看本章保留了哪些核心代码、删掉了哪些无关机制。
-
-`learn-claude-code` 更适合理解完整机制和 Python 教学实现；`mini-claude-code` 更适合用 Java 阅读最小源码、运行 demo 和观察分支快照。
