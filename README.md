@@ -35,6 +35,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s13 Agent Teams
 - s14 Team Protocols
 - s15 Autonomous Agents
+- s16 MCP Plugin
 
 ## 分支学习
 
@@ -55,6 +56,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s13-agent-teams`
 - `s14-team-protocols`
 - `s15-autonomous-agents`
+- `s16-mcp-plugin`
 
 切换示例：
 
@@ -310,6 +312,23 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S15AutonomousA
 2. `创建三个任务：先创建 schema，再创建 API（依赖 schema），最后创建测试（依赖 API）。启动 alice 和 bob，让他们自己认领并完成任务。`
 
 观察重点：队友是否自动认领未分配任务？有 `blockedBy` 依赖的任务是否在前置完成后被认领？任务 owner 是否是队友名？空闲 60 秒后是否自动退出？IDLE 阶段收到 `shutdown_request` 是否立即响应？
+
+## 运行 s16
+
+s16 加入 MCP Plugin：Agent 先通过 `connect_mcp` 连接 mock MCP server，再把 server 发现到的工具加入同一个工具池。教学版提供 `time` 和 `weather` 两个 mock server，不启动真实 MCP 子进程，也不访问真实天气 API。
+
+```sh
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S16McpPluginDemo
+```
+
+试试这些 prompt：
+
+1. `连接 time MCP server，并告诉我当前时间。`
+2. `连接 weather MCP server，并查询 Shanghai 当前天气。`
+3. `同时连接 time 和 weather，告诉我现在有哪些 mcp__ 前缀工具可以用。`
+4. `连接 weather MCP server，然后查询 Hangzhou 和 San Francisco 的天气并做一个简短对比。`
+
+观察重点：连接 MCP server 后，是否出现 `mcp__time__get_current_time` 或 `mcp__weather__get_current_weather` 这类前缀工具？MCP 工具是否和内置工具走同一个 dispatch 流程？工具描述里是否标注 `(readOnly)`？
 
 ## 参考项目
 

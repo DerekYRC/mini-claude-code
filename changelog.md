@@ -4,7 +4,7 @@
 
 ## 阶段一：基础 Agent Harness
 
-阶段一包含 s01-s15：
+阶段一包含 s01-s16：
 
 - s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
 - s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
@@ -21,6 +21,7 @@
 - s13 Agent Teams：一个搞不定，组队来，分支 `s13-agent-teams`
 - s14 Team Protocols：队友之间要有约定，分支 `s14-team-protocols`
 - s15 Autonomous Agents：队友自己看板，有活就认领，分支 `s15-autonomous-agents`
+- s16 MCP Plugin：能力不够，插上 MCP，分支 `s16-mcp-plugin`
 
 ## s01：One loop & Bash is all you need
 
@@ -1349,3 +1350,78 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S15AutonomousA
 - 完成任务后是否进入下一轮 idle 并继续找任务？
 - 空闲 60 秒后是否自动退出？
 - IDLE 阶段收到 `shutdown_request` 是否立即响应？
+
+## s16：能力不够，插上 MCP
+
+**教学分支：** `s16-mcp-plugin`
+
+s16 演示 MCP Plugin 的最小形态：外部能力不再写进主循环，而是通过 `connect_mcp` 连接 server、发现工具，再把工具包装进同一个 `ToolRegistry`。
+
+本章使用 mock MCP server，保留 MCP 的学习重点：
+
+- `McpClient`：模拟 tools/list 和 tools/call。
+- `connect_mcp`：连接 server 并返回发现到的工具。
+- `mcp__{server}__{tool}`：用前缀避免不同 server 的工具名冲突。
+- `McpToolPool`：每轮重新组装 builtin tools 和 MCP tools。
+- `DynamicMcpAgentLoop`：工具池动态变化，循环本身仍然只按工具名 dispatch。
+
+### mock MCP server
+
+本章提供两个 mock server：
+
+```text
+time
+  mcp__time__get_current_time
+
+weather
+  mcp__weather__get_current_weather
+```
+
+`time` 使用 Java `java.time` 获取当前时间。`weather` 使用内置 mock 数据返回天气，不访问真实网络。
+
+两个工具都标注 `(readOnly)`，让模型能看到 MCP 工具的安全属性。教学版不做权限拦截，权限机制仍属于 s03 的主题。
+
+### 动态工具池
+
+s01-s15 的工具池大多在 demo 启动时固定。s16 不同：连接 MCP server 后，工具集合会变化。
+
+因此本章新增 `McpToolPool`：
+
+```text
+bash/read_file/write_file
+  + connect_mcp
+  + connected MCP tools
+  -> ToolRegistry
+```
+
+`DynamicMcpAgentLoop` 每轮调用模型前重新 assemble 工具池。这样模型第一轮调用 `connect_mcp` 后，下一轮就能看到 `mcp__time__get_current_time` 这类新工具。
+
+### 验证
+
+启动命令：
+
+```sh
+git switch s16-mcp-plugin
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S16McpPluginDemo
+```
+
+真实 API smoke test，试试这些 prompt：
+
+1. `连接 time MCP server，并告诉我当前时间。`
+2. `连接 weather MCP server，并查询 Shanghai 当前天气。`
+3. `同时连接 time 和 weather，告诉我现在有哪些 mcp__ 前缀工具可以用。`
+4. `连接 weather MCP server，然后查询 Hangzhou 和 San Francisco 的天气并做一个简短对比。`
+
+预期观察：
+
+- 第一次通常出现 `Tool> connect_mcp {"name":"time"}` 或 `Tool> connect_mcp {"name":"weather"}`。
+- 连接成功后，工具结果中会列出 `mcp__time__get_current_time` 或 `mcp__weather__get_current_weather`。
+- 下一轮模型可以调用这些 MCP 工具。
+- 主循环没有为 MCP 工具写特殊分支，仍然通过 `ToolRegistry` 按工具名分发。
+
+### 源码注释补充
+
+本章为 MCP 的边界补充中文注释：mock client 只负责发现和调用，mock server 只负责声明自己的工具，tool adapter 负责把 MCP 工具转换成项目已有 `Tool` 接口。
