@@ -2,6 +2,7 @@ package org.miniclaudecode.team;
 
 import cn.hutool.core.io.FileUtil;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -27,9 +28,16 @@ public class MessageBus {
     }
 
     public synchronized void send(String from, String to, String content, String type) {
-        TeamMessage message = new TeamMessage(from, to, type, content, System.currentTimeMillis());
+        send(from, to, content, type, new JSONObject());
+    }
+
+    public synchronized void send(String from, String to, String content,
+            String type, JSONObject metadata) {
+        TeamMessage message = new TeamMessage(from, to, type, content,
+                System.currentTimeMillis(), metadata);
         FileUtil.appendUtf8String(JSON.toJSONString(message) + "\n", inboxFile(to));
-        System.out.println("  [bus] " + from + " -> " + to + ": " + preview(content));
+        System.out.println("  [bus] " + from + " -> " + to
+                + ": (" + type + ") " + preview(content));
     }
 
     public synchronized List<TeamMessage> readInbox(String agent) {
@@ -51,8 +59,14 @@ public class MessageBus {
     public String formatInbox(List<TeamMessage> messages) {
         StringBuilder sb = new StringBuilder();
         for (TeamMessage message : messages) {
+            JSONObject metadata = message.getMetadata();
+            String requestId = metadata == null ? "" : metadata.getString("request_id");
             sb.append("From ").append(message.getFrom())
-                    .append(" [").append(message.getType()).append("]: ")
+                    .append(" [").append(message.getType());
+            if (requestId != null && !requestId.isBlank()) {
+                sb.append(" req:").append(requestId);
+            }
+            sb.append("]: ")
                     .append(message.getContent())
                     .append("\n");
         }

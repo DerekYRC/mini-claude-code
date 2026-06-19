@@ -11,6 +11,7 @@ import org.miniclaudecode.core.ToolUseBlock;
 import org.miniclaudecode.llm.AnthropicConfig;
 import org.miniclaudecode.llm.AnthropicLlmClient;
 import org.miniclaudecode.llm.LlmClient;
+import org.miniclaudecode.protocol.ProtocolService;
 import org.miniclaudecode.team.MessageBus;
 import org.miniclaudecode.team.TeamMessage;
 
@@ -29,6 +30,12 @@ public class SpawnTeammateTool implements Tool {
 
     private static final int MAX_TEAMMATE_TURNS = 10;
 
+    private static final int INBOX_NONE = 0;
+
+    private static final int INBOX_CONTINUE = 1;
+
+    private static final int INBOX_SHUTDOWN = 2;
+
     private final File workdir;
 
     private final MessageBus bus;
@@ -41,16 +48,24 @@ public class SpawnTeammateTool implements Tool {
 
     private final String promptTemplate;
 
+    private final ProtocolService protocol;
+
     private final Set<String> activeTeammates = ConcurrentHashMap.newKeySet();
 
     public SpawnTeammateTool(File workdir, MessageBus bus, String baseUrl,
             String apiKey, String model, String promptTemplate) {
+        this(workdir, bus, baseUrl, apiKey, model, promptTemplate, null);
+    }
+
+    public SpawnTeammateTool(File workdir, MessageBus bus, String baseUrl,
+            String apiKey, String model, String promptTemplate, ProtocolService protocol) {
         this.workdir = workdir;
         this.bus = bus;
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.model = model;
         this.promptTemplate = promptTemplate;
+        this.protocol = protocol;
     }
 
     /*
@@ -116,9 +131,14 @@ public class SpawnTeammateTool implements Tool {
                     .register(new ReadFileTool(workdir))
                     .register(new WriteFileTool(workdir))
                     .register(new SendMessageTool(bus, name));
+            if (protocol != null) {
+                registry.register(new SubmitPlanTool(protocol, name));
+            }
             LlmClient client = new AnthropicLlmClient(config(String.format(promptTemplate,
                     name, role, workdir.getAbsolutePath())));
-            AssistantMessage answer = runTeammateLoop(name, prompt, client, registry);
+            AssistantMessage answer = protocol == null
+                    ? runFixedTurnLoop(name, prompt, client, registry)
+                    : runProtocolLoop(name, prompt, client, registry);
             String summary = extractText(answer);
             if (summary.isBlank()) {
                 summary = "Done.";
@@ -134,7 +154,7 @@ public class SpawnTeammateTool implements Tool {
         }
     }
 
-    private AssistantMessage runTeammateLoop(String name, String prompt,
+    private AssistantMessage runFixedTurnLoop(String name, String prompt,
             LlmClient client, ToolRegistry registry) {
         List<Message> messages = new ArrayList<>();
         messages.add(Message.user(prompt));
@@ -157,14 +177,81 @@ public class SpawnTeammateTool implements Tool {
         return lastResponse;
     }
 
-    private void injectTeammateInbox(String name, List<Message> messages) {
+    private AssistantMessage runProtocolLoop(String name, String prompt,
+            LlmClient client, ToolRegistry registry) {
+        List<Message> messages = new ArrayList<>();
+        messages.add(Message.user(prompt));
+        AssistantMessage lastResponse = null;
+
+        for (int turn = 0; turn < MAX_TEAMMATE_TURNS; turn++) {
+            int inboxAction = injectTeammateInbox(name, messages);
+            if (inboxAction == INBOX_SHUTDOWN) {
+                return lastResponse;
+            }
+
+            AssistantMessage response = client.chat(messages, registry.definitions());
+            lastResponse = response;
+            messages.add(Message.assistant(response.getContent()));
+
+            List<ToolResultBlock> toolResults = executeToolUses(response, registry);
+            if (!"tool_use".equals(response.getStopReason()) || toolResults.isEmpty()) {
+                // s14 的关键差异：队友空闲后等待 inbox，而不是直接退出。
+                int idleAction = idleUntilMessage(name, messages);
+                if (idleAction == INBOX_SHUTDOWN) {
+                    return response;
+                }
+                continue;
+            }
+            messages.add(Message.toolResults(toolResults));
+        }
+        return lastResponse;
+    }
+
+    private int injectTeammateInbox(String name, List<Message> messages) {
         List<TeamMessage> inbox = bus.readInbox(name);
         if (inbox.isEmpty()) {
-            return;
+            return INBOX_NONE;
         }
         System.out.println("  [teammate inbox] " + name + ": "
                 + inbox.size() + " message(s)");
-        messages.add(Message.user("<inbox>\n" + bus.formatInbox(inbox) + "\n</inbox>"));
+
+        List<TeamMessage> normalMessages = new ArrayList<>();
+        for (TeamMessage message : inbox) {
+            if (protocol != null && protocol.isProtocolMessage(message)) {
+                boolean shouldStop = protocol.handleTeammateProtocolMessage(name, message, messages);
+                if (shouldStop) {
+                    return INBOX_SHUTDOWN;
+                }
+            } else {
+                normalMessages.add(message);
+            }
+        }
+        if (!normalMessages.isEmpty()) {
+            messages.add(Message.user("<inbox>\n"
+                    + bus.formatInbox(normalMessages) + "\n</inbox>"));
+            return INBOX_CONTINUE;
+        }
+        return INBOX_NONE;
+    }
+
+    private int idleUntilMessage(String name, List<Message> messages) {
+        while (true) {
+            sleepOneSecond();
+            int inboxAction = injectTeammateInbox(name, messages);
+            if (inboxAction != INBOX_NONE) {
+                return inboxAction;
+            }
+        }
+    }
+
+    private void sleepOneSecond() {
+        try {
+            Thread.sleep(1000);
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Teammate interrupted", e);
+        }
     }
 
     private List<ToolResultBlock> executeToolUses(AssistantMessage response,
