@@ -63,6 +63,18 @@ public class TaskService {
 		return builder.toString();
 	}
 
+	public List<TaskRecord> scanUnclaimedTasks() {
+		List<TaskRecord> available = new ArrayList<>();
+		for (TaskRecord task : store.list()) {
+			if (PENDING.equals(task.getStatus())
+					&& (task.getOwner() == null || task.getOwner().isBlank())
+					&& blockingDependencies(task).isEmpty()) {
+				available.add(task);
+			}
+		}
+		return available;
+	}
+
 	public String getTask(String taskId) {
 		return JSON.toJSONString(store.load(taskId), true);
 	}
@@ -75,6 +87,9 @@ public class TaskService {
 		TaskRecord task = store.load(taskId);
 		if (!PENDING.equals(task.getStatus())) {
 			return "Task " + taskId + " is " + task.getStatus() + ", cannot claim";
+		}
+		if (task.getOwner() != null && !task.getOwner().isBlank()) {
+			return "Task " + taskId + " already owned by " + task.getOwner();
 		}
 		List<String> blocked = blockingDependencies(task);
 		if (!blocked.isEmpty()) {

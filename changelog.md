@@ -4,7 +4,7 @@
 
 ## 阶段一：基础 Agent Harness
 
-阶段一包含 s01-s14：
+阶段一包含 s01-s15：
 
 - s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
 - s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
@@ -20,6 +20,7 @@
 - s12 Cron Scheduler：定时触发，不需要人推，分支 `s12-cron-scheduler`
 - s13 Agent Teams：一个搞不定，组队来，分支 `s13-agent-teams`
 - s14 Team Protocols：队友之间要有约定，分支 `s14-team-protocols`
+- s15 Autonomous Agents：队友自己看板，有活就认领，分支 `s15-autonomous-agents`
 
 ## s01：One loop & Bash is all you need
 
@@ -1287,3 +1288,64 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S14TeamProtoco
 ### 源码注释补充
 
 本章为协议状态机、队友 idle loop 和协议工具定义补充了中文注释。每个新增工具的 `getDefinition()` 方法上方都保留了发给模型的 JSON 定义，便于直接对照工具 schema。
+
+## s15：队友自己看板，有活就认领
+
+**教学分支：** `s15-autonomous-agents`
+
+本章解决的问题是：Lead 不再逐个分配任务。Lead 只创建任务并启动队友，队友空闲时自己扫描 `.tasks/` 看板，找到 pending、无 owner、依赖已完成的任务后自动认领并继续工作。
+
+本章对齐 `learn-claude-code/s17_autonomous_agents` 的教学代码。
+
+### 核心变化
+
+```text
+Lead create_task(...)
+Lead spawn_teammate("alice", ...)
+  → alice WORK 阶段完成当前上下文
+  → alice IDLE 每 5 秒轮询
+  → 先检查 inbox，再 scanUnclaimedTasks()
+  → claimTask(taskId, "alice")
+  → 注入 <auto-claimed>...</auto-claimed>
+  → 回到 WORK 执行任务
+  → 60 秒没有 inbox 和可认领任务后退出
+```
+
+### 本章新增
+
+- `TaskService.scanUnclaimedTasks()`：扫描 pending、无 owner、依赖已完成的任务，返回 `List<TaskRecord>`。
+- `TaskService.claimTask()`：增加 owner 已存在检查，避免重复认领已分配任务。
+- `ClaimTaskTool`：工具定义只暴露 `task_id`；队友工具由 harness 注入 `defaultOwner`，任务 owner 固定为队友名。
+- `SpawnTeammateTool`：传入 `TaskService` 时启用 autonomous 模式；队友工具池增加 `list_tasks/claim_task/complete_task`。
+- `S15AutonomousAgentsDemo`：注册 s15 工具组合，并把 Lead / Teammate system prompt 放在类顶部静态变量中。
+
+### 设计选择
+
+本章不实现文件锁，也不实现任务 watcher。教学版只用 5 秒轮询和 owner 检查演示核心机制。两个队友仍可能在极端并发下竞争同一任务；真实系统需要文件锁或事务保护。
+
+### 验证
+
+启动命令：
+
+```sh
+git switch s15-autonomous-agents
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S15AutonomousAgentsDemo
+```
+
+真实 API smoke test，试试这些 prompt：
+
+1. `在任务板上创建 3 个任务，然后启动 alice 和 bob。观察他们自动认领并工作。`
+2. `创建三个任务：先创建 schema，再创建 API（依赖 schema），最后创建测试（依赖 API）。启动 alice 和 bob，让他们自己认领并完成任务。`
+
+观察重点：
+
+- 队友是否自动认领未分配任务？
+- 有 `blockedBy` 依赖的任务是否等前置完成后才被认领？
+- 任务 owner 是否是队友名？
+- 队友主动调用 `claim_task` 时，owner 是否由 harness 固定为队友名？
+- 完成任务后是否进入下一轮 idle 并继续找任务？
+- 空闲 60 秒后是否自动退出？
+- IDLE 阶段收到 `shutdown_request` 是否立即响应？
