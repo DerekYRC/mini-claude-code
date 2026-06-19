@@ -1,5 +1,7 @@
 package org.miniclaudecode.team;
 
+import com.alibaba.fastjson.JSONObject;
+
 /**
  * 文件邮箱里的一条消息。
  *
@@ -17,15 +19,23 @@ public class TeamMessage {
 
     private long timestamp;
 
+    private JSONObject metadata;
+
     public TeamMessage() {
     }
 
     public TeamMessage(String from, String to, String type, String content, long timestamp) {
+        this(from, to, type, content, timestamp, new JSONObject());
+    }
+
+    public TeamMessage(String from, String to, String type, String content,
+            long timestamp, JSONObject metadata) {
         this.from = from;
         this.to = to;
         this.type = type;
         this.content = content;
         this.timestamp = timestamp;
+        this.metadata = metadata == null ? new JSONObject() : metadata;
     }
 
     public String getFrom() {
@@ -66,5 +76,13 @@ public class TeamMessage {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public JSONObject getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(JSONObject metadata) {
+        this.metadata = metadata;
     }
 }

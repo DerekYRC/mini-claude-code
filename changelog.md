@@ -4,7 +4,7 @@
 
 ## 阶段一：基础 Agent Harness
 
-阶段一包含 s01-s13：
+阶段一包含 s01-s14：
 
 - s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
 - s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
@@ -19,6 +19,7 @@
 - s11 Background Tasks：慢操作丢后台，agent 继续思考，分支 `s11-background-tasks`
 - s12 Cron Scheduler：定时触发，不需要人推，分支 `s12-cron-scheduler`
 - s13 Agent Teams：一个搞不定，组队来，分支 `s13-agent-teams`
+- s14 Team Protocols：队友之间要有约定，分支 `s14-team-protocols`
 
 ## s01：One loop & Bash is all you need
 
@@ -1211,3 +1212,78 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S13AgentTeamsD
 ### 提示词位置调整
 
 本章将 Lead 和 Teammate 的 system prompt 都放在 `S13AgentTeamsDemo` 顶部静态变量中，方便对照学习。
+
+## s14：队友之间要有约定
+
+**教学分支：** `s14-team-protocols`
+
+本章解决的问题是：队友之间只靠普通文本消息协作时，Lead 很难判断“这个回复对应哪个请求”。最小解法是给协议消息加 `request_id`，并在进程内维护一张 pending 请求表。
+
+本章对齐 `learn-claude-code/s16_team_protocols` 的教学代码。
+
+### 核心变化
+
+```text
+Lead request_shutdown("alice")
+  → ProtocolService 创建 ProtocolState(req_xxx, shutdown, pending)
+  → MessageBus 写入 shutdown_request + metadata.request_id
+  → alice idle loop 读取 inbox
+  → ProtocolService.handleTeammateProtocolMessage 回复 shutdown_response
+  → Lead consumeLeadInbox 匹配 request_id 并把状态改为 approved
+```
+
+计划审批使用同一套机制：
+
+```text
+bob submit_plan("...")
+  → plan_approval_request 写入 lead inbox
+  → Lead review_plan(req_xxx, true, "Approved")
+  → plan_approval_response 写回 bob inbox
+```
+
+### 本章新增
+
+- `ProtocolState`：一条协议请求的状态，记录 requestId、type、sender、target、status、payload。
+- `ProtocolService`：创建请求、匹配响应、按消息类型分发协议消息。
+- `RequestShutdownTool`：Lead 发起关机握手。
+- `RequestPlanTool`：Lead 要求队友先提交计划。
+- `ReviewPlanTool`：Lead 根据 `request_id` 批准或拒绝计划。
+- `SubmitPlanTool`：队友把计划提交到 Lead inbox。
+- `ProtocolCheckInboxTool`：Lead 读取 inbox 时先路由协议响应，避免状态丢失。
+- `S14TeamProtocolsDemo`：注册团队协议工具，并把 Lead / Teammate system prompt 放在类顶部静态变量中。
+
+### 设计选择
+
+本章只演示协议消息流，不实现“未批准就禁止 bash/write_file”的执行门控。队友提交计划后仍然可以继续调用工具，真实约束依赖提示词和模型遵守；如果要做强约束，需要在队友工具分发前加 permission gating。
+
+队友在 s14 中多了 idle loop：当模型不再返回 `tool_use` 时，不立刻退出，而是每秒轮询自己的 inbox。收到 `shutdown_request` 就回复并结束，收到普通消息就注入上下文继续运行。
+
+### 验证
+
+启动命令：
+
+```sh
+git switch s14-team-protocols
+export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
+export MODEL_ID='deepseek-v4-pro'
+export ANTHROPIC_API_KEY='你的 API Key'
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S14TeamProtocolsDemo
+```
+
+真实 API smoke test，试试这些 prompt：
+
+1. `启动 alice 作为后端开发。让她创建一个文件。然后请求她关机。`
+2. `启动 bob，任务是重构认证模块。让他先提交计划。然后审查并批准它。`
+
+观察重点：
+
+- 是否出现 `[protocol] shutdown_request -> alice`？
+- alice 是否在 idle 后收到 `shutdown_request`？
+- alice 是否回复 `shutdown_response`？
+- Lead 是否通过 `consumeLeadInbox` 把 shutdown 请求状态更新为 approved？
+- bob 是否通过 `submit_plan` 发出 `plan_approval_request`？
+- `review_plan` 是否按同一个 `request_id` 写回 `plan_approval_response`？
+
+### 源码注释补充
+
+本章为协议状态机、队友 idle loop 和协议工具定义补充了中文注释。每个新增工具的 `getDefinition()` 方法上方都保留了发给模型的 JSON 定义，便于直接对照工具 schema。

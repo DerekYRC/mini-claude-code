@@ -33,6 +33,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - s11 Background Tasks
 - s12 Cron Scheduler
 - s13 Agent Teams
+- s14 Team Protocols
 
 ## 分支学习
 
@@ -51,6 +52,7 @@ export ANTHROPIC_API_KEY="你的 API Key"
 - `s11-background-tasks`
 - `s12-cron-scheduler`
 - `s13-agent-teams`
+- `s14-team-protocols`
 
 切换示例：
 
@@ -276,6 +278,21 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S13AgentTeamsD
 6. `检查收件箱，确认 alice 汇报她已经根据后续消息完成任务。`
 
 观察重点：是否出现 `[teammate] alice spawned`？`.mailboxes/` 目录下的 JSONL 文件长什么样？Lead 是否在 alice sleep 期间发送后续消息？sleep 结束进入下一轮前是否触发 `[teammate inbox] alice`？队友完成后 Lead 的 inbox 是否注入 history？
+
+## 运行 s14
+
+s14 在 Agent Teams 的文件邮箱上加入结构化协议：请求和响应通过 `request_id` 关联，并由 `ProtocolService` 维护 pending → approved/rejected 状态。
+
+```sh
+mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S14TeamProtocolsDemo
+```
+
+试试这些 prompt：
+
+1. `启动 alice 作为后端开发。让她创建一个文件。然后请求她关机。`
+2. `启动 bob，任务是重构认证模块。让他先提交计划。然后审查并批准它。`
+
+观察重点：关机握手是否完整（请求 → 确认 → 关机）？`request_id` 是否在请求和响应之间保持一致？队友 idle 后是否能收到 `shutdown_request`？
 
 ## 参考项目
 
