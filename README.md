@@ -21,22 +21,22 @@
 
 ## 功能
 
-* [s01 Agent Loop](changelog.md#s01one-loop--bash-is-all-you-need)：一个工具 + 一个循环 = 一个 Agent
-* [s02 Tool Dispatch](changelog.md#s02加一个工具只加一个-handler)：加一个工具，只加一个 handler
-* [s03 Permission](changelog.md#s03先划边界再给自由)：先划边界，再给自由
-* [s04 Hooks](changelog.md#s04挂在循环上不写进循环里)：挂在循环上，不写进循环里
-* [s05 Todo](changelog.md#s05没有计划的-agent-走哪算哪)：没有计划的 agent 走哪算哪
-* [s06 Subagent](changelog.md#s06大任务拆小每个小任务干净的上下文)：大任务拆小，每个小任务干净的上下文
-* [s07 Skill Loading](changelog.md#s07用到时再加载别全塞-prompt-里)：用到时再加载，别全塞 prompt 里
-* [s08 Context Compact](changelog.md#s08上下文总会满要有办法腾地方)：上下文总会满，要有办法腾地方
-* [s09 Memory](changelog.md#s09记住该记的忘掉该忘的)：记住该记的，忘掉该忘的
-* [s10 Task System](changelog.md#s10task-system)：大目标拆成小任务，排好序，持久化
-* [s11 Background Tasks](changelog.md#s11background-tasks)：慢操作丢后台，agent 继续思考
-* [s12 Cron Scheduler](changelog.md#s12cron-scheduler)：定时触发，不需要人推
-* [s13 Agent Teams](changelog.md#s13agent-teams)：一个搞不定，组队来
-* [s14 Team Protocols](changelog.md#s14队友之间要有约定)：队友之间要有约定
-* [s15 Autonomous Agents](changelog.md#s15队友自己看板有活就认领)：队友自己看板，有活就认领
-* [s16 MCP Plugin](changelog.md#s16能力不够插上-mcp)：能力不够，插上 MCP
+* [s01 Agent Loop](changelog.md#s01one-loop--bash-is-all-you-need) — ReAct：思考-行动-观察，LLM ⇄ Tool 闭环
+* [s02 Tool Dispatch](changelog.md#s02加一个工具只加一个-handler) — Tool Use：注册即用，不改主循环
+* [s03 Permission](changelog.md#s03先划边界再给自由) — Guardrails：三层校验，先审后执行
+* [s04 Hooks](changelog.md#s04挂在循环上不写进循环里) — Lifecycle：四个事件点，横切逻辑不侵入循环
+* [s05 Todo](changelog.md#s05没有计划的-agent-走哪算哪) — Planning：先规划再执行，状态可追踪
+* [s06 Subagent](changelog.md#s06大任务拆小每个小任务干净的上下文) — Delegation：委托子代理，上下文干净隔离
+* [s07 Skill Loading](changelog.md#s07用到时再加载别全塞-prompt-里) — Lazy Skill Loading：索引在 Prompt，正文按需加载
+* [s08 Context Compact](changelog.md#s08上下文总会满要有办法腾地方) — Context Compression：四层压缩管线，满了就腾空间
+* [s09 Memory](changelog.md#s09记住该记的忘掉该忘的) — Long-term Memory：记什么、忘什么、何时合并
+* [s10 Task System](changelog.md#s10task-system) — Task Orchestration：任务图 + 状态机 + 依赖检查
+* [s11 Background Tasks](changelog.md#s11background-tasks) — Async：慢操作丢后台，Agent 继续思考
+* [s12 Cron Scheduler](changelog.md#s12cron-scheduler) — Scheduled Trigger：cron 表达式，无人值守触发
+* [s13 Agent Teams](changelog.md#s13agent-teams) — Multi-Agent：Lead 派活，队友并行干活
+* [s14 Team Protocols](changelog.md#s14队友之间要有约定) — Structured Communication：request_id + 状态机，队友间结构化通信
+* [s15 Autonomous Agents](changelog.md#s15队友自己看板有活就认领) — Self-Organization：队友扫看板，有活自己认领
+* [s16 MCP Plugin](changelog.md#s16能力不够插上-mcp) — MCP：动态工具池，能力不够插上就用
 
 ## 使用方法
 
