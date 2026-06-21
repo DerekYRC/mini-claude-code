@@ -1,723 +1,889 @@
 # mini-claude-code changelog
 
-本文件按章节讲解 `mini-claude-code` 的源码改动、核心知识和测试验证。
-
-## 阶段一：基础 Agent Harness
-
-阶段一包含 s01-s11：
-
-- s01 Agent Loop：一个工具 + 一个循环 = 一个 Agent，分支 `s01-agent-loop`
-- s02 Tool Dispatch：加一个工具，只加一个 handler，分支 `s02-tool-dispatch`
-- s03 Permission：先划边界，再给自由，分支 `s03-permission`
-- s04 Hooks：挂在循环上，不写进循环里，分支 `s04-hooks`
-- s05 Todo：没有计划的 agent 走哪算哪，分支 `s05-todo`
-- s06 Subagent：大任务拆小，每个小任务干净的上下文，分支 `s06-subagent`
-- s07 Skill Loading：用到时再加载，别全塞 prompt 里，分支 `s07-skill-loading`
-- s08 Context Compact：上下文总会满，要有办法腾地方，分支 `s08-context-compact`
-- s09 Memory：记住该记的，忘掉该忘的，分支 `s09-memory`
-- s10 Task System：大目标拆成小任务，排好序，持久化，分支 `s10-task-system`
-- s11 Background Tasks：慢操作丢后台，agent 继续思考，分支 `s11-background-tasks`
-
-## s01：One loop & Bash is all you need
+## s01 Agent Loop
 
 **教学分支：** `s01-agent-loop`
 
-本章只回答一个问题：一个 Agent 最小需要什么？
+### 问题
 
-答案是：
+LLM 只能输出文本，无法操作真实环境。一个编码 Agent 最小需要什么？
 
-- 一段告诉模型「你是谁、当前工作目录在哪、什么时候用工具」的 `system` prompt
-- 一个封装了 Anthropic Messages API 的 `LlmClient`
-- 一个能描述和执行工具的 `Tool`
-- 一个负责「模型 → 工具 → 模型」的 `AgentLoop`
+### 功能
 
-### 核心流程
+一个 Bash 工具 + 一个 ReAct 循环 = 最小 Agent。
 
-`AgentLoop.run()` 做的事情很少：
+新增（18 个文件）：
 
-1. 把用户输入追加到 `history`，支持连续输入。
-2. 调用 `LlmClient.chat()`，把历史消息和工具定义发给模型。
-3. 如果模型返回 `tool_use`，找到同名工具并执行。
-4. 把执行结果包装成 `tool_result`，继续发给模型。
-5. 如果模型不再要求工具调用，就返回最终回答。
+- **消息模型**：`ContentBlock`（抽象基类）、`TextBlock`、`ThinkingBlock`、`ToolUseBlock`、`ToolResultBlock`、`UnknownBlock`、`Message`、`AssistantMessage`
+- **工具接口**：`Tool`（接口，`getDefinition()` + `execute()`）、`ToolDefinition`、`ToolResult`
+- **LLM 客户端**：`LlmClient`（接口）、`AnthropicLlmClient`（Hutool HTTP 实现）、`AnthropicConfig`
+- **循环**：`AgentLoop`（主循环，101 行）、`AgentLoopListener`（回调接口）
+- **工具**：`BashTool`（唯一真实工具，`/bin/sh -c <command>`）
 
-这就是最小 Agent 循环。它没有权限系统、没有 hook、没有 todo，也没有多工具注册中心——这些机制会在后续章节单独出现。
+### 设计
 
-### 真实 API 适配
+采用 ReAct 模式，循环不关心工具是什么，只做三件事：
 
-`AnthropicLlmClient` 使用 Hutool HTTP 调用 Anthropic Messages 兼容接口，并使用 FastJSON 组装和解析 JSON。
-
-请求顶层携带最小 system prompt：
-
-- 风格参考 s01 原始实现：`You are a coding agent at <workdir>. Use bash to solve tasks. Act, don't explain.`
-- `<workdir>` 来自当前 Java 进程工作目录，对齐 bash 工具实际执行目录。
-
-Java 版没有使用 Anthropic Python SDK，而是用 Hutool 手写 HTTP，显式设置以下请求头：
-
-- `x-api-key`
-- `content-type`
-
-工具定义序列化字段：
-
-- `name`
-- `description`
-- `input_schema`
-
-响应 content block 解析为：
-
-- `TextBlock`
-- `ThinkingBlock`
-- `ToolUseBlock`
-- `UnknownBlock`
-
-兼容接口可能返回 `thinking` content block。本章保留 `thinking` 和 `signature`，在后续 assistant 历史消息中原样序列化回请求，避免丢失模型要求保留的上下文块。
-
-### Bash 工具
-
-`BashTool` 是本章唯一真实工具：
-
-- 输入：`{"command":"pwd"}`
-- 执行：`/bin/sh -c <command>`
-- 输出：`exit_code=<code>` 加 stdout/stderr
-
-它故意不做权限判断。权限边界会放到 s03，让读者能单独看到「先判断能不能做，再决定要不要问用户」的机制。
-
-### 验证
-
-本项目直接启动 demo 连接真实 API 验证，不保留单元测试。启动命令：
-
-```sh
-git switch s01-agent-loop
-
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDemo
+```text
+LLM → tool_use → execute → tool_result → LLM → ... → 文本回复
 ```
 
-真实 API smoke test：
+1. 把用户输入追加到 history（history 由外部 demo 管理，支持连续对话）
+2. 调用 `LlmClient.chat()`，带上历史消息和工具定义
+3. 模型返回 `tool_use`（通过 `stop_reason == "tool_use"` 判断）→ 按名称从内部 `Map<String, Tool>` 找到工具执行 → 结果包装成 `tool_result` 追加到 history → 回到步骤 2
+4. 模型返回其他 `stop_reason`（如 `end_turn`）→ 循环结束，返回 `AssistantMessage`
 
-试试这些 prompt：
+关键设计决策：
 
-1. `创建一个名为 hello.py 的文件，内容是打印 "Hello, World!"`
-2. `列出当前目录中的所有 Python 文件`
-3. `当前 git 分支是什么？`
+- **只用内部 Map 做 dispatch**：不引入 ToolRegistry（留给 s02），AgentLoop 构造时把 `List<Tool>` 转成 `Map<String, Tool>`
+- **不做权限判断**：BashTool 直接执行，不检查命令是否危险。权限边界留给 s03
+- **不用 Anthropic SDK**：用 Hutool HTTP 直接调 Messages API，兼容 DeepSeek 等 Anthropic 兼容接口
+- **保留 thinking block**：兼容接口可能返回 `thinking` 内容块，解析时保留 `thinking` 和 `signature`，在后续 assistant 历史中原样序列化回去
 
-预期观察：
+### 实现
 
-- 模型需要触碰真实环境时调用 `bash`，例如创建文件、执行 `find` 或查看 git 分支。
-- 控制台出现 `Tool> bash ...` 和 `ToolResult> exit_code=0`。
-- 模型拿到足够信息后不再调用工具，循环结束并返回最终回答。
+`AgentLoop.run(List<Message> messages)` — 主循环，s01 分支真实代码（101 行）：
 
-### 源码注释补充
+```java
+public AssistantMessage run(List<Message> messages) {
+    for (int turn = 0; turn < 20; turn++) {
+        // 一轮 Agent 循环：LLM -> tool_use -> tool_result -> 下一轮 LLM
+        AssistantMessage response = llmClient.chat(messages, toolDefinitions());
+        listener.onAssistantMessage(response);
+        messages.add(Message.assistant(response.getContent()));
 
-本章为核心源码补充了中文注释，重点解释 Agent 循环的执行流程、bash 工具的参数和输出格式，以及 Anthropic Messages 请求/响应的 JSON 转换逻辑。
+        // 执行模型中请求的工具调用
+        List<ToolResultBlock> toolResults = executeToolUses(response);
+        if (!"tool_use".equals(response.getStopReason()) || toolResults.isEmpty()) {
+            listener.onStop(response);
+            return response;
+        }
 
-当前分支已不包含 `AnthropicConfig.timeoutMillis`。
+        // tool_result 以 user role 回传，这是 Anthropic Messages 协议要求
+        messages.add(Message.toolResults(toolResults));
+    }
+    throw new IllegalStateException("Agent loop reached max turns");
+}
 
-### 提示词位置调整
+private ToolResult executeTool(ToolUseBlock toolUse) {
+    Tool tool = tools.get(toolUse.getName());  // s01：内部 Map dispatch，s02 会抽出 ToolRegistry
+    if (tool == null) {
+        return new ToolResult("Unknown tool: " + toolUse.getName());
+    }
+    return tool.execute(toolUse.getInput());
+}
+```
 
-本章把 system prompt 从 `AnthropicConfig` 移到 `S01AgentLoopDemo`，让读者打开章节入口类就能看到模型的工作目录和 bash 使用约束。
+`BashTool.execute()` — s01 真实代码（ProcessBuilder，无超时）：
 
-## s02：加一个工具，只加一个 handler
+```java
+public ToolResult execute(JSONObject input) {
+    String command = input == null ? "" : input.getString("command");
+    if (command == null || command.isBlank()) {
+        return new ToolResult("No command provided");
+    }
+    try {
+        Process process = new ProcessBuilder("/bin/sh", "-c", command)
+                .directory(workdir)
+                .redirectErrorStream(true)  // stderr 合并到 stdout
+                .start();
+        String output = readOutput(process);  // BufferedReader 逐行读
+        int exitCode = process.waitFor();
+        return new ToolResult("exit_code=" + exitCode + "\n" + output);
+    } catch (IOException e) {
+        return new ToolResult("Command failed to start: " + e.getMessage());
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return new ToolResult("Command interrupted");
+    }
+}
+```
+
+### 遗留问题
+
+- 工具 dispatch 逻辑（`Map<String, Tool>`）耦合在 AgentLoop 内部，没有抽成独立组件 → **s02 ToolRegistry** 解决
+- 危险命令（`rm -rf /`）直接执行，没有权限闸门 → **s03 Permission** 解决
+- 循环没有扩展点，日志/统计只能通过 Listener 硬编码在 demo 里 → **s04 Hooks** 解决
+
+## s02 Tool Dispatch
 
 **教学分支：** `s02-tool-dispatch`
 
-s02 只解决一个问题：工具越来越多时，Agent 循环不能因为「新增工具」继续变胖。
+### 问题
 
-本章新增：
+s01 只有一个 Bash 工具。加 `read_file`、`write_file` 就得改 AgentLoop，加越多改越多。怎么做到加工具不改循环？
 
-- `ToolRegistry`：一个最小 dispatch map，负责 `register(tool)`、`find(name)` 和导出 `definitions()`。
-- `ReadFileTool`：读取文件内容，工具名是 `read_file`。
-- `WriteFileTool`：写入文件内容，工具名是 `write_file`。
-- `EditFileTool`：替换文件中的精确文本一次，工具名是 `edit_file`。
-- `GlobTool`：按 glob pattern 查找文件，工具名是 `glob`。
-- `S02ToolDispatchDemo`：注册 `bash/read_file/write_file/edit_file/glob`，外层仍然循环读输入。
+另外，理论上 `cat`、`echo`、`sed`、`find` 都能用 bash 搞定，为什么不直接用 bash，还要加专用工具？
 
-### 核心变化
+- **Token 开销**：bash 输出可能很长（`cat` 一个大文件），专用工具可以限制行数、截断，减少上下文浪费
+- **可靠性**：`sed` 替换文本容易因正则转义出错，`edit_file` 只需传精确的 `old_text` 和 `new_text`，不依赖正则
+- **安全性**：专用工具在代码层面做路径约束（canonical path 检查），bash 命令字符串更难审计，容易被注入
+- **模型友好**：结构化的 `input_schema`（JSON Schema）比自然语言描述命令更不容易出错，模型也更擅长填写 JSON 参数
 
-s01 的循环结构不变：
+真实 Claude Code 有 **19 个工具**（bash、read、write、edit、glob、grep、task、todo_write、web_search、web_fetch、skill、ask_user_question 等），本章只加最具代表性的 4 个文件操作工具。
 
-```text
-LLM -> tool_use -> execute tool -> tool_result -> LLM
-```
+### 功能
 
-s02 只把“按工具名找执行器”从循环里抽到 `ToolRegistry`：
+引入 `ToolRegistry` 作为工具注册中心。加新工具只需实现 `Tool` 接口 + `registry.register()`，循环只负责按名字查找，不再关心工具是怎么来的。
+
+新增：
+
+- `ToolRegistry`：`LinkedHashMap` 实现，`register()` 返回 `this` 支持链式调用，`find()` 按名查找，`definitions()` 导出给 LLM
+- `PathGuard`：路径安全组件，`resolve(path)` 做 canonical path 检查，防止 `../` 穿越
+- `ReadFileTool`：读取 UTF-8 文本文件，支持 `limit` 限制行数
+- `WriteFileTool`：写入文件内容，自动创建父目录
+- `EditFileTool`：替换文件中精确文本的第一次出现
+- `GlobTool`：按 glob pattern 查找文件
+
+### 设计
 
 ```text
 ToolRegistry
-  bash       -> BashTool
-  read_file  -> ReadFileTool
-  write_file -> WriteFileTool
-  edit_file  -> EditFileTool
-  glob       -> GlobTool
+  bash       → BashTool
+  read_file  → ReadFileTool
+  write_file → WriteFileTool
+  edit_file  → EditFileTool
+  glob       → GlobTool
 ```
 
-所以新增工具时，只需要：
+核心原则：**循环不变，只抽 dispatch**。s01 的 AgentLoop 内部用 `Map<String, Tool>` dispatch，s02 把它提取成独立的 `ToolRegistry` 类。ReAct 循环结构完全保留，唯一的改动是把 `tools.get(name)` 变成 `registry.find(name)`。
 
-1. 写一个实现 `Tool` 的类。
-2. 在 demo 里 `registry.register(new XxxTool(...))`。
+新增工具时只需两步，不改 AgentLoop：
 
-### 五个工具
+1. 写一个实现 `Tool` 接口的类
+2. 在 demo 里 `registry.register(new XxxTool(...))`
 
-本章对齐参考项目 s02 的工具集合：
+文件工具统一通过 `PathGuard` 做 workdir 路径约束——`PathGuard.resolve(path)` 将相对路径转为 canonical path，与 workdir 的 canonical path 做前缀比较，越界抛异常。所有文件工具在构造函数中创建 `new PathGuard(workdir)`，execute 时调用 `pathGuard.resolve(path)`。
 
-```text
-bash       Run a shell command.
-read_file  Read file contents.
-write_file Write content to file.
-edit_file  Replace text in file once.
-glob       Find files by pattern.
+### 实现
+
+`ToolRegistry` — `register()` 返回 `this`，支持链式调用：
+
+```java
+public class ToolRegistry {
+    private final Map<String, Tool> tools = new LinkedHashMap<>();
+
+    public ToolRegistry register(Tool tool) {
+        tools.put(tool.getDefinition().getName(), tool);
+        return this;
+    }
+
+    public Tool find(String name) {
+        return tools.get(name);
+    }
+
+    public List<ToolDefinition> definitions() {
+        List<ToolDefinition> definitions = new ArrayList<>();
+        for (Tool tool : tools.values()) {
+            definitions.add(tool.getDefinition());
+        }
+        return definitions;
+    }
+}
 ```
 
-`read_file` 输入：
+`PathGuard` — 所有文件工具的路径安全组件（s02 引入）：
 
-```json
-{"path":"README.md","limit":3}
+```java
+public class PathGuard {
+    private final File workdir;
+
+    public File resolve(String path) throws IOException {
+        File target = new File(workdir, path).getCanonicalFile();
+        if (!target.toPath().startsWith(workdir.getCanonicalFile().toPath())) {
+            throw new IOException("Path escapes workspace: " + path);
+        }
+        return target;
+    }
+}
 ```
 
-`write_file` 输入：
+`ReadFileTool.execute()` — 委托 PathGuard 做路径校验，截断时追加剩余行数提示：
 
-```json
-{"path":"target/s02-demo.txt","content":"old hello"}
+```java
+public ToolResult execute(JSONObject input) {
+    String path = input.getString("path");
+    if (path == null || path.isBlank()) {
+        return new ToolResult("Error: No path provided");
+    }
+    try {
+        File target = pathGuard.resolve(path);
+        Integer limit = input.getInteger("limit");
+        List<String> lines = Files.readAllLines(target.toPath(), StandardCharsets.UTF_8);
+        if (limit != null && limit > 0 && limit < lines.size()) {
+            List<String> limited = new ArrayList<>(lines.subList(0, limit));
+            limited.add("... (" + (lines.size() - limit) + " more lines)");
+            lines = limited;
+        }
+        return new ToolResult(String.join("\n", lines));
+    } catch (IOException e) {
+        return new ToolResult("Error: " + e.getMessage());
+    }
+}
 ```
 
-`edit_file` 输入：
+### 遗留问题
 
-```json
-{"path":"target/s02-demo.txt","old_text":"old","new_text":"new"}
-```
+- 工具能执行什么就执行什么，没有权限闸门 → **s03 Permission** 解决
+- 循环没有扩展点，日志、统计、权限判断还是得改 AgentLoop → **s04 Hooks** 解决
 
-`glob` 输入：
-
-```json
-{"pattern":"target/s02-*.txt"}
-```
-
-文件类工具的共同边界：
-
-- 路径必须留在 workdir 内，避免读取工作目录之外的文件。
-- `read_file` 的 `limit` 可选，用来限制返回行数。
-- `write_file` 会自动创建父目录。
-- `edit_file` 只替换第一次出现的精确文本。
-
-权限系统仍然不在 s02 实现；“能不能做、要不要问用户”会放到 s03。
-
-### 验证
-
-启动命令：
-
-```sh
-git switch s02-tool-dispatch
-
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S02ToolDispatchDemo
-```
-
-真实 API smoke test：
-
-试试这些 prompt：
-
-1. `读取 README.md，并告诉我这个项目是做什么的`
-2. `创建一个名为 test.py 的文件，内容是打印 "hello"，然后再读取它确认内容`
-3. `查找当前目录中的所有 Java 文件`
-4. `同时读取 README.md 和 pom.xml，然后创建一个 summary.md 总结文件`
-
-预期观察：
-
-- 简单读取通常出现 `Tool> read_file ...`。
-- 创建并回读文件会连续出现 `Tool> write_file ...` 和 `Tool> read_file ...`。
-- 查找文件会出现 `Tool> glob ...`，多文件总结可能一次触发多个工具调用。
-
-### 源码注释补充
-
-本章为核心源码补充了中文注释，重点解释 `ToolRegistry` 的 dispatch 机制和五个工具的职责边界。
-
-### 提示词位置调整
-
-本章将 system prompt 作为 `S02ToolDispatchDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，方便读者先看到模型被要求使用工具池解决任务。
-
-## s03：先划边界，再给自由
+## s03 Permission
 
 **教学分支：** `s03-permission`
 
-s03 在 s02 的工具执行前加入权限判断。循环的核心仍然是：
+### 问题
+
+s02 的工具什么都能做——`rm -rf /`、写 `/etc/`、`chmod 777`，Agent 不会问你，直接执行。需要一个权限闸门，在工具执行前拦住危险操作。
+
+### 功能
+
+在工具执行前插入三层权限管线：硬拒绝 → 规则匹配 → 用户确认。危险命令直接拒绝，敏感操作需要用户点头。
+
+新增：
+
+- `PermissionManager`：按工具类型分发检查（bash → deny/ask，文件写入 → 越界检查，其他 → 直接放行）
+- `PermissionDecision`：`allow()` 或 `deny(message)`，拒绝消息回传给模型
+- `ApprovalPrompter`（接口）+ `ConsoleApprovalPrompter`（Scanner 读 y/N 的实现）
+
+### 设计
+
+PermissionManager 按工具类型分发，不是一股脑对所有工具做字符串匹配：
 
 ```text
-LLM -> tool_use -> permission -> execute tool -> tool_result -> LLM
+PermissionManager.check(toolUse)
+  ├─ tool == "bash"       → checkBash(): deny list → ask patterns → allow
+  ├─ tool == "write_file" → checkFileWrite(): canonical path 越界检查
+  │   或 "edit_file"
+  └─ 其他工具              → 直接 allow()（read_file、glob 等不涉及破坏操作）
 ```
 
-本章新增：
+Bash 工具三道门：
 
-- `PermissionManager`：权限管线入口。
-- `PermissionDecision`：表达允许或拒绝。
-- `ApprovalPrompter` / `ConsoleApprovalPrompter`：当规则需要用户确认时暂停询问。
-- `S03PermissionDemo`：注册 s02 的五个工具，并把权限管线挂到 `AgentLoop`。
-
-### 三道门
-
-参考项目 s03 把工具执行前的权限分为三层：
-
-1. 硬阻止列表：例如 `rm -rf /`、`sudo`、`shutdown`、`mkfs`、`dd if=`，永远拒绝。
-2. 规则匹配：例如 `rm `、`> /etc/`、`chmod 777`，属于潜在破坏操作。
-3. 用户确认：命中规则后打印 `Permission>` 和工具参数，等待用户输入 `y/yes`。
-
-文件写入类工具仍限制在 workdir 内；路径越界直接拒绝。
-
-### 验证
-
-启动命令：
-
-```sh
-git switch s03-permission
-
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S03PermissionDemo
+```text
+bash 命令 → 1. denyList 命中？（rm -rf /、sudo、shutdown、mkfs、dd if=、> /dev/sda）
+                ├─ 命中 → deny()，不问用户
+                └─ 未命中 → 2. askPatterns 命中？（rm 、> /etc/、chmod 777）
+                                ├─ 命中 → ConsoleApprovalPrompter.approve()，等用户 y/N
+                                └─ 未命中 → 3. allow()
 ```
 
-真实 API smoke test：
+文件写入工具只有一道门：路径 canonical 比较，越界直接 deny。
 
-试试这些 prompt：
+流程上，PermissionManager 插在 AgentLoop 的 tool_use 和 execute 之间：
 
-1. `在当前目录创建一个名为 test.txt 的文件`
-2. `删除 /tmp 目录中的所有临时文件`
-3. `当前目录里有哪些文件？`
-4. `尝试把一个文件写入 /etc/something`
+```text
+LLM → tool_use → PermissionManager.check() → 通过 → execute → tool_result
+                                            → 拒绝 → 拒绝原因作为 tool_result
+```
 
-预期观察：
+拒绝时不抛异常，而是把拒绝原因作为 `tool_result` 回传给模型，让模型看到为什么没执行。
 
-- 工作区内普通写文件可以直接通过。
-- 只读查询可以直接通过。
-- `rm`、写入 `/etc` 等危险或越界操作会被权限管线拦截；需要确认时会出现 `Permission>` 和 `Allow? [y/N]`。
+### 实现
 
-### 源码注释补充
+`PermissionManager.check()` — 按工具类型分发：
 
-本章为核心源码补充了中文注释，重点解释 `PermissionManager` 的三层权限模型和 `ApprovalPrompter` 的交互流程。
+```java
+public PermissionDecision check(ToolUseBlock toolUse) {
+    if ("bash".equals(toolUse.getName())) {
+        return checkBash(toolUse);       // deny list + ask patterns
+    }
+    if ("write_file".equals(toolUse.getName()) || "edit_file".equals(toolUse.getName())) {
+        return checkFileWrite(toolUse);  // canonical path 越界检查
+    }
+    return PermissionDecision.allow();   // read_file、glob 等直接放行
+}
 
-### 提示词位置调整
+private PermissionDecision checkBash(ToolUseBlock toolUse) {
+    String command = toolUse.getInput().getString("command");
+    // 第一层：硬阻止列表（不问用户）
+    for (String pattern : denyList) {
+        if (command != null && command.contains(pattern)) {
+            return PermissionDecision.deny("Permission denied: '" + pattern + "' is on the deny list");
+        }
+    }
+    // 第二层：规则匹配 → 用户确认
+    for (String pattern : askPatterns) {
+        if (command != null && command.contains(pattern)) {
+            return ask(toolUse, "Potentially destructive command");
+        }
+    }
+    return PermissionDecision.allow();
+}
+```
 
-本章将 system prompt 作为 `S03PermissionDemo` 顶部的 `SYSTEM_PROMPT` 静态变量。真正的权限边界仍由 `PermissionManager` 执行，不受提示词影响。
+`ConsoleApprovalPrompter` — 教学版审批器，只认 y/yes：
 
-## s04：挂在循环上，不写进循环里
+```java
+public boolean approve(ToolUseBlock toolUse, String reason) {
+    System.out.println("Permission> " + reason);
+    System.out.println("Tool> " + toolUse.getName() + " " + toolUse.getInput());
+    System.out.print("Allow? [y/N] ");
+    String choice = scanner.nextLine().trim().toLowerCase();
+    return "y".equals(choice) || "yes".equals(choice);
+}
+```
+
+Demo 中挂载 PermissionManager：
+
+```java
+PermissionManager permissionManager = new PermissionManager(workdir, new ConsoleApprovalPrompter(scanner));
+AgentLoop loop = new AgentLoop(new AnthropicLlmClient(config), registry, listener, permissionManager);
+```
+
+### 遗留问题
+
+- 权限规则硬编码在 `PermissionManager` 里，加新规则要改核心代码 → **s04 Hooks** 可以把权限做成一个 hook，规则从循环中解耦
+- 日志、统计、输出检查这些横切逻辑也混在循环或权限代码里 → **s04 Hooks** 提供统一扩展点
+
+## s04 Hooks
 
 **教学分支：** `s04-hooks`
 
-s04 解决的问题是：权限、日志、输出检查、停止统计这些能力都和工具调用相关，但不应该全部写进 `AgentLoop`。
+### 问题
 
-本章新增：
+s03 的权限规则写在 `PermissionManager` 里，日志、统计、输出检查也都散落在 AgentLoop 各处。每加一个横切能力就得改主循环。怎么做到加能力不改循环？
 
-- `HookEvent`：定义四个事件点：`USER_PROMPT_SUBMIT`、`PRE_TOOL_USE`、`POST_TOOL_USE`、`STOP`。
-- `HookContext`：在事件触发时携带 prompt、tool_use、tool_result、messages 等上下文。
-- `HookDecision`：Hook 可以选择放行，也可以阻止本次工具调用。
-- `HookManager`：按事件注册多个 hook，并按顺序触发。
-- `S04HooksDemo`：演示把权限、日志、输出检查和停止统计都挂到 hook 上。
+### 功能
 
-### 核心变化
+把横切逻辑从 AgentLoop 中解耦，在循环的固定位置挂事件钩子。权限、日志、输出检查都可以注册为 hook，循环只负责触发，不管逻辑。
 
-主循环没有写死“权限规则”或“日志格式”，只在固定位置触发 hook：
+新增：
+
+- `Hook`：函数式接口 `HookDecision run(HookContext context)`
+- `HookEvent`：常量类，四个事件点 `USER_PROMPT_SUBMIT`、`PRE_TOOL_USE`、`POST_TOOL_USE`、`STOP`
+- `HookContext`：POJO，按事件类型选填字段（userPrompt / toolUse / toolResult / messages）
+- `HookDecision`：`pass()` 放行或 `block(message)` 阻止，`isBlocked()` 判断
+- `HookManager`：`Map<String, List<Hook>>` 存储，`register(event, hook)` 返回 this，`trigger(event, context)` 按序执行
+
+### 设计
+
+四个事件点，覆盖一次对话的完整生命周期：
 
 ```text
-用户输入 -> UserPromptSubmit
-工具执行前 -> PreToolUse
-工具执行后 -> PostToolUse
-循环停止时 -> Stop
+用户输入 → UserPromptSubmit（由 demo 外部触发，不在 AgentLoop 内）
+工具执行前 → PreToolUse（权限检查、日志记录，可阻止执行）
+工具执行后 → PostToolUse（输出日志，只读）
+循环停止 → Stop（统计工具调用次数）
 ```
 
-`PreToolUse` 的返回值会影响工具是否执行：
+关键设计决策：
 
-- `HookDecision.pass()`：继续执行工具。
-- `HookDecision.block(message)`：跳过工具，把 `message` 作为 `tool_result` 回传给模型。
+- **PreToolUse 可以阻止**：返回 `HookDecision.block(message)` 时，message 作为 tool_result 回传模型。后续同事件的 hook 不再触发（短路）
+- **PostToolUse 只读**：工具已执行，hook 只能观察，不能撤销
+- **UserPromptSubmit 在 AgentLoop 外触发**：由 demo 在调用 `loop.run()` 之前手动触发，因为 demo 负责接收用户输入，不是 AgentLoop 的职责
+- **权限从 s03 的独立类迁移为 s04 的一个 hook**：s04 demo 中权限逻辑作为一个 `PreToolUse` hook 内联写在 `permissionHook()` 方法里，不再使用 `PermissionManager` 类。演示了「不改循环，只增减 hook」
+- **Hook 内联在 demo 中**：教学版把 hook 写在入口类里，让读者一眼看到扩展点怎么挂上去
 
-这样权限系统可以从 s03 的主流程判断，迁移成 s04 的一个 hook。以后要加审计日志、敏感信息扫描、输出截断提醒，也只需要注册新的 hook，不需要继续改主循环。
+### 实现
 
-### 本章保留的最小 Hook
+`HookManager` — 按 String key 存储，`trigger()` 返回第一个 block 或最终 pass：
 
-`S04HooksDemo` 注册了四类 hook：
+```java
+public class HookManager {
+    private final Map<String, List<Hook>> hooks = new LinkedHashMap<>();
 
-- `UserPromptSubmit`：打印当前工作目录。
-- `PreToolUse`：一个权限 hook 加一个工具调用日志 hook。
-- `PostToolUse`：当工具输出超过阈值时提醒。
-- `Stop`：统计本轮对话用了多少次工具。
+    public HookManager register(String event, Hook hook) {
+        hooks.computeIfAbsent(event, key -> new ArrayList<>()).add(hook);
+        return this;
+    }
 
-这些 hook 故意写在 demo 中，便于读者直接看到“扩展点怎么挂上去”。真正项目里可以把它们拆到独立类。
-
-### 验证
-
-启动命令：
-
-```sh
-git switch s04-hooks
-
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S04HooksDemo
+    public HookDecision trigger(String event, HookContext context) {
+        List<Hook> eventHooks = hooks.get(event);
+        if (eventHooks == null) {
+            return HookDecision.pass();
+        }
+        for (Hook hook : eventHooks) {
+            HookDecision decision = hook.run(context);
+            if (decision != null && decision.isBlocked()) {
+                return decision;
+            }
+        }
+        return HookDecision.pass();
+    }
+}
 ```
 
-真实 API smoke test：
+s04 中权限变为一个 hook（内联在 `permissionHook()` 方法，不再用 PermissionManager 类）：
 
-试试这些 prompt：
+```java
+private static HookDecision permissionHook(HookContext context, Scanner scanner) {
+    ToolUseBlock toolUse = context.getToolUse();
+    if (!"bash".equals(toolUse.getName())) {
+        return HookDecision.pass();  // 非 bash 工具直接放行
+    }
+    String command = toolUse.getInput().getString("command");
+    // 硬阻止列表
+    for (String pattern : Arrays.asList("rm -rf /", "sudo", "shutdown", "reboot", "mkfs", "dd if=")) {
+        if (command.contains(pattern)) {
+            return HookDecision.block("Permission denied by hook: " + pattern);
+        }
+    }
+    // 规则匹配 → 用户确认
+    for (String pattern : Arrays.asList("rm ", "> /etc/", "chmod 777")) {
+        if (command.contains(pattern)) {
+            System.out.print("Allow? [y/N] ");
+            String choice = scanner.nextLine().trim().toLowerCase();
+            if (!"y".equals(choice) && !"yes".equals(choice)) {
+                return HookDecision.block("Permission denied by hook");
+            }
+        }
+    }
+    return HookDecision.pass();
+}
+```
 
-1. `读取 README.md`
-2. `创建一个名为 test.txt 的文件`
-3. `删除 /tmp 目录中的所有临时文件`
+Demo 中注册四类 hook：
 
-预期观察：
+```java
+HookManager hooks = new HookManager();
+hooks.register(HookEvent.USER_PROMPT_SUBMIT, ctx -> {
+    System.out.println("[HOOK] UserPromptSubmit: working in " + workdir.getAbsolutePath());
+    return HookDecision.pass();
+});
+hooks.register(HookEvent.PRE_TOOL_USE, ctx -> permissionHook(ctx, scanner));     // 权限
+hooks.register(HookEvent.PRE_TOOL_USE, ctx -> {                                   // 日志
+    System.out.println("[HOOK] PreToolUse: " + ctx.getToolUse().getName());
+    return HookDecision.pass();
+});
+hooks.register(HookEvent.POST_TOOL_USE, ctx -> {                                  // 输出
+    System.out.println("[HOOK] PostToolUse: " + ctx.getToolUse().getName());
+    return HookDecision.pass();
+});
+hooks.register(HookEvent.STOP, ctx -> {                                           // 统计
+    System.out.println("[HOOK] Stop: session used " + toolResultCount(ctx.getMessages()) + " tool calls");
+    return HookDecision.pass();
+});
 
-- 每次工具执行前会出现 `[HOOK]` 日志。
-- 普通读写通过后会触发 `PostToolUse`。
-- 危险命令会被权限 hook 拦截，Agent 循环本身不写死权限规则。
+AgentLoop loop = new AgentLoop(llmClient, registry, listener, hookManager);  // 不传 PermissionManager
+```
 
-### 源码注释补充
+### 遗留问题
 
-本章为核心源码补充了中文注释，重点解释四类 Hook 事件的触发时机和 `HookManager` 的顺序执行机制。
+- Agent 可以自由调用工具，但缺少任务规划能力，复杂任务容易边做边忘 → **s05 Todo** 解决
 
-### 提示词位置调整
-
-本章将 system prompt 作为 `S04HooksDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词内容保持参考项目的工具使用约束。
-
-## s05：没有计划的 agent 走哪算哪
+## s05 Todo
 
 **教学分支：** `s05-todo`
 
-s05 解决的问题是：复杂任务如果不先列步骤，Agent 容易边做边忘。最小解法是把“计划”也做成一个工具，让模型显式写下当前任务列表。
+### 问题
 
-本章新增：
+Agent 可以自由调用工具，但面对多步骤任务时没有计划能力——边做边忘，做到一半忘了下一步是什么。怎么让 Agent 先列计划再执行？
 
-- `TodoItem`：普通 Java 数据类，保存 `content` 和 `status`。
-- `TodoWriteTool`：工具名 `todo_write`，用内存保存当前任务列表。
-- `S05TodoDemo`：在 s02 的五个工具基础上注册 `todo_write`，并在 system prompt 中要求“多步骤任务先计划，执行中更新状态”。
+### 功能
 
-### 核心变化
+把计划做成一个工具 `todo_write`，让模型显式写下当前任务列表和状态。循环不变，计划能力来自工具本身——延续 s02「加一个工具只加一个 handler」的原则。
 
-s05 没有把计划逻辑写进主循环。循环仍然只做：
+新增：
 
-```text
-LLM -> tool_use -> dispatch -> tool_result -> LLM
-```
+- `TodoItem`：数据类，保存 `content` 和 `status`
+- `TodoWriteTool`：工具名 `todo_write`，内存存储，接收完整列表替换当前状态
 
-新增能力来自一个普通工具：
+### 设计
 
 ```text
-todo_write -> TodoWriteTool -> currentTodos
+用户：重构 hello.py，加类型标注和 docstring
+  → Agent 先调 todo_write，列出计划：
+      [pending] 检查文件是否存在
+      [pending] 补充类型标注
+      [pending] 添加 docstring
+      [pending] 验证语法
+  → 逐项执行，每完成一项更新状态为 completed
 ```
 
-所以本章仍然延续 s02 的原则：加一个工具，只加一个 handler。为了让本章更容易阅读，demo 没有继承 s03 的权限管线和 s04 的 Hook 展示代码，只保留理解 `todo_write` 所需的最小上下文。
+核心设计决策：
 
-### todo_write 输入
+- **计划就是工具调用**：不在 AgentLoop 里写死计划逻辑。`todo_write` 和其他工具一样，注册即用
+- **全量替换**：`todo_write` 接收完整任务列表，替换内存中的当前状态（不是追加/合并），避免旧任务残留
+- **三种状态**：`pending` → `in_progress` → `completed`，模型自己决定流转
+- **只管清单，不执行**：`todo_write` 只记录计划，真正执行靠 bash、write_file 等其他工具
+- System prompt 要求「多步骤任务先计划，执行中更新状态」
 
-`todo_write` 接收完整的当前任务列表：
+### 实现
+
+`TodoWriteTool.execute()` — 带校验的全量替换：
+
+```java
+public ToolResult execute(JSONObject input) {
+    JSONArray todos = todosArray(input);
+    if (todos == null) {
+        return new ToolResult("Error: todos must be an array");
+    }
+    List<TodoItem> nextTodos = new ArrayList<>();
+    for (int i = 0; i < todos.size(); i++) {
+        JSONObject item = todos.getJSONObject(i);
+        String content = item.getString("content");
+        String status = item.getString("status");
+        if (content == null || content.isBlank()) {
+            return new ToolResult("Error: todos[" + i + "] missing content");
+        }
+        if (!Arrays.asList("pending", "in_progress", "completed").contains(status)) {
+            return new ToolResult("Error: todos[" + i + "] has invalid status: " + status);
+        }
+        nextTodos.add(new TodoItem(content, status));
+    }
+    currentTodos.clear();
+    currentTodos.addAll(nextTodos);  // 全量替换，不是追加
+    return new ToolResult("Updated " + currentTodos.size() + " tasks\n" + render());
+}
+```
+
+输入格式：
 
 ```json
 {
   "todos": [
-    {"content": "检查 s05 demo", "status": "in_progress"},
-    {"content": "总结结果", "status": "pending"}
+    {"content": "检查文件是否存在", "status": "in_progress"},
+    {"content": "补充类型标注", "status": "pending"},
+    {"content": "验证语法", "status": "pending"}
   ]
 }
 ```
 
-状态只允许三种：
+### 遗留问题
 
-- `pending`
-- `in_progress`
-- `completed`
+- Todo 只存在内存，会话结束就没了，不能跨会话恢复 → **s10 Task System** 做持久化任务图
+- 复杂子任务塞在同一上下文会越来越乱 → **s06 Subagent** 用干净上下文独立完成
 
-工具会替换当前内存中的 todo 列表，并返回一份可读的任务清单。它只负责记录计划，不直接执行任务。
-
-### 验证
-
-启动命令：
-
-```sh
-git switch s05-todo
-
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S05TodoDemo
-```
-
-真实 API smoke test：
-
-试试这些 prompt：
-
-1. `重构 target/s05-example/hello.py：如果文件不存在，先创建一个简单 hello 函数，然后补充类型标注、docstring 和 main guard`
-2. `在 target/s05-example/demo_pkg 下创建一个 Python package，包含 __init__.py、utils.py 和 tests/test_utils.py`
-3. `检查 target/s05-example 下的 Python 文件，并修复明显的风格问题`
-
-预期观察：
-
-- 第一次工具调用应优先出现 `Tool> todo_write ...`。
-- TODO 会被拆成多步，并且执行过程中状态从 `pending` 变成 `in_progress` / `completed`。
-- 后续才会出现写文件、读文件、bash 验证等工具调用。
-
-### 源码注释补充
-
-本章为核心源码补充了中文注释，重点解释 `todo_write` 工具如何在不修改 Agent 循环的前提下为模型提供计划能力。
-
-### 提示词位置调整
-
-本章将 system prompt 作为 `S05TodoDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词内容保持参考项目的计划约束。
-
-## s06：大任务拆小，每个小任务干净的上下文
+## s06 Subagent
 
 **教学分支：** `s06-subagent`
 
-s06 解决的问题是：父 Agent 的上下文已经很长时，复杂子任务继续塞在同一个 `messages` 里会越来越乱。最小解法是把“委托子任务”做成一个工具，让子 Agent 用全新的上下文独立完成任务，只把最终摘要带回父 Agent。
+### 问题
 
-本章新增：
+父 Agent 的上下文已经很拥挤时，复杂子任务继续塞在同一个 `messages` 里会越来越乱——工具调用和结果混在一起，模型注意力被无关历史分散。怎么让子任务在干净的上下文中独立执行，只把结果摘要带回来？
 
-- `AgentLoop` 的 `maxTurns`：默认仍是 20，子 Agent 可以单独设置为 30。
-- `TaskTool`：工具名 `task`，输入是 `description`，内部启动一个子 Agent。
-- `S06SubagentDemo`：父工具池包含 `task`，子工具池只包含 `bash/read_file/write_file/edit_file/glob`。
+### 功能
 
-### 核心变化
+把「委托子任务」做成一个 `task` 工具。子 Agent 用全新的 `messages` 和独立的 `AgentLoop` 执行，父 Agent 只收到最终文本摘要，看不到中间过程。
 
-父 Agent 调用 `task` 后，子 Agent 重新开始一份干净消息列表：
+新增：
 
-```text
-Parent messages[] -> task(description)
-                  -> Subagent messages[] = [description]
-                  -> Subagent tools: bash/read_file/write_file/edit_file/glob
-                  -> summary text
-                  -> Parent tool_result
-```
+- `TaskTool`：工具名 `task`，输入 `description`，内部启动子 Agent，返回摘要
+- `AgentLoop` 增加 `maxTurns` 构造参数（默认 20，子 Agent 设为 30）
 
-关键边界是：子 Agent 不注册 `task` 工具，所以不能继续递归创建子 Agent。子 Agent 的中间工具调用和历史消息也不会带回父 Agent，父 Agent 只收到最终摘要。
-
-本章故意不带 s05 todo 和 s04 hook，只保留理解“干净上下文子 Agent”所需的最小代码。
-
-### 验证
-
-启动命令：
-
-```sh
-git switch s06-subagent
-
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S06SubagentDemo
-```
-
-真实 API smoke test：
-
-试试这些 prompt：
-
-1. `使用一个子任务找出这个项目使用什么构建工具和测试框架`
-2. `委托子 Agent 读取 src/main/java/org/miniclaudecode/core 下的 Java 文件，并总结每个文件的作用`
-3. `用 task 创建 target/s06-example/string_tools.py，里面包含 slugify(text: str) 函数，然后由父 Agent 验证它`
-
-预期观察：
-
-- 父 Agent 调用 `Tool> task ...` 后出现 `[Subagent spawned]` / `[Subagent done]`。
-- 子 Agent 的工具调用以 `[sub] Tool> ...` 输出。
-- 父 Agent 不接收子 Agent 的完整过程，只继续处理子 Agent 返回的最终摘要。
-
-### 源码注释补充
-
-本章为核心源码补充了中文注释，重点解释 `TaskTool` 如何创建独立上下文的子 Agent 以及父子 Agent 的消息隔离机制。
-
-### 提示词位置调整
-
-本章将父 Agent 和子 Agent 的 system prompt 分别作为 `PARENT_SYSTEM_PROMPT` 与 `SUBAGENT_SYSTEM_PROMPT` 静态变量，提示词内容保持参考项目的委托边界。
-
-## s07：用到时再加载，别全塞 prompt 里
-
-**教学分支：** `s07-skill-loading`
-
-s07 解决的问题是：Agent 可能有很多技能说明，但把所有 `SKILL.md` 全塞进 system prompt 会浪费上下文。最小解法是启动时只注入技能目录，真正需要时再通过工具加载正文。
-
-本章新增：
-
-- `Skill`：普通 Java 数据类，保存 `name`、`description` 和 `body`。
-- `SkillRegistry`：扫描 `skills/*/SKILL.md`，解析 frontmatter，用 `name/description` 生成目录。
-- `LoadSkillTool`：工具名 `load_skill`，通过技能名返回 `<skill name="...">正文</skill>`。
-- `S07SkillLoadingDemo`：注册 s02 的五个基础工具和 `load_skill`。
-- `skills/code-review/SKILL.md`、`skills/java-cli/SKILL.md`：两个最小示例技能。
-
-### 两层加载
-
-s07 把技能分成两层：
+### 设计
 
 ```text
-便宜层：system prompt 只放技能目录
-昂贵层：load_skill(name) 返回 <skill name="...">正文</skill>
+Parent messages[] → task(description)
+                  → Subagent messages[] = [description]（全新上下文）
+                  → Subagent tools: bash/read_file/write_file/edit_file/glob
+                  → 独立循环，不共享 history
+                  → summary text → Parent tool_result
 ```
 
-`SkillRegistry` 只允许通过已扫描到的技能名查找内容，因此 `load_skill` 不接受任意路径，避免路径穿越。frontmatter 里的 `name` 和 `description` 用于生成目录，真正注入给模型的是正文 body。
+关键边界设计：
 
-本章不注册 s06 的 `task` 工具，目的是让读者专注理解“先列目录，用到再展开”。
+- **不可递归**：子 Agent 不注册 `task` 工具，防止无限委托
+- **简化工具集**：子 Agent 只有基础文件操作 + bash，不给 todo、权限、hook 等父级工具
+- **上下文隔离**：子 Agent 的中间工具调用和历史消息完全不带回父 Agent，父 Agent 只收到最终文本摘要
+- **更多步数**：子 Agent `maxTurns=30`（父 Agent 默认 20），给子任务更多执行空间
 
-### 验证
+### 实现
 
-启动命令：
+`TaskTool` — 子 Agent 工具和 LLM 客户端由构造函数注入（不在 execute 内创建）：
 
-```sh
-git switch s07-skill-loading
+```java
+public class TaskTool implements Tool {
+    private final LlmClient subagentClient;
+    private final ToolRegistry subagentTools;
 
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S07SkillLoadingDemo
-```
-
-真实 API smoke test：
-
-试试这些 prompt：
-
-1. `有哪些技能可用？`
-2. `加载 code-review 技能，并遵循它的说明`
-3. `我需要做一次代码审查，请先加载相关技能`
-
-预期观察：
-
-- Agent 可以先从 system prompt 中的技能目录知道有哪些技能。
-- 需要完整规范时会出现 `Tool> load_skill ...`。
-- 加载后，工具结果以 `<skill name="code-review">` 开头，回答会使用对应 skill 的说明。
-
-### 源码注释补充
-
-本章为核心源码补充了中文注释，重点解释 `SkillRegistry` 的两层加载机制和 `load_skill` 工具的按需注入策略。
-
-### 提示词位置调整
-
-本章将 system prompt 模板作为 `S07SkillLoadingDemo` 顶部的 `SYSTEM_PROMPT_TEMPLATE` 静态变量，运行时只填入技能目录。
-
-## s08：上下文总会满，要有办法腾地方
-
-**教学分支：** `s08-context-compact`
-
-s08 解决的问题是：工具输出和多轮对话会持续挤占上下文，Agent 需要在 LLM 调用前主动腾地方。最小解法是把压缩做成一条挂在循环前的管线，再用 `compact` 工具提供一次显式触发入口。
-
-本章新增：
-
-- `MessageInspector`：集中判断 `tool_use`、`tool_result` 和消息大小。
-- `ToolResultStore`：把超大的工具结果写到 `.task_outputs/tool-results/`。
-- `TranscriptStore`：压缩前把完整历史保存到 `.transcripts/`。
-- `CompactionPipeline`：按固定顺序执行四层压缩。
-- `CompactTool`：暴露 `compact` 工具定义，真正压缩由循环处理。
-- `CompactingAgentLoop`：s08 专用循环，在 LLM 前运行压缩管线，并特殊处理 `compact`。
-- `S08ContextCompactDemo`：注册 `bash/read_file/write_file/edit_file/glob/load_skill/compact`。
-
-### 四层压缩顺序
-
-s08 的压缩不是按编号跑，而是按成本和信息保真度跑：
-
-```text
-toolResultBudget -> snipCompact -> microCompact -> compactHistory
-```
-
-含义分别是：
-
-- `toolResultBudget`：最后一条 `tool_result` 太大时，先把原文落盘，只把文件路径和预览留在上下文。
-- `snipCompact`：消息数量太多时裁掉中间历史，但不能拆散 `assistant(tool_use)` 和后续 `user(tool_result)`。
-- `microCompact`：保留最近 3 条工具结果，旧工具结果改成短占位符。
-- `compactHistory`：最后才额外调用 LLM 生成摘要，并在摘要前保存完整 transcript。
-
-这个顺序很重要：便宜的、保真度高的先做，昂贵的摘要最后才做。
-
-### compact 工具
-
-`compact` 工具只提供模型可见的工具定义：
-
-```json
-{
-  "name": "compact",
-  "description": "Summarize earlier conversation to free context space.",
-  "input_schema": {
-    "type": "object",
-    "properties": {
-      "focus": {"type": "string"}
+    public TaskTool(LlmClient subagentClient, ToolRegistry subagentTools) {
+        this.subagentClient = subagentClient;
+        this.subagentTools = subagentTools;
     }
-  }
+
+    public ToolResult execute(JSONObject input) {
+        String description = input.getString("description");
+        if (description == null || description.isBlank()) {
+            return new ToolResult("Error: No description provided");
+        }
+        System.out.println("[Subagent spawned]");
+        // 子 Agent 不复用父 Agent 的 history，这是"干净上下文"的核心
+        AgentLoop subLoop = new AgentLoop(subagentClient, subagentTools, listener, 30);
+        AssistantMessage answer = subLoop.run(description);
+        System.out.println("[Subagent done]");
+        // 父 Agent 只拿到最终文本摘要，不拿到子 Agent 的完整中间消息
+        return new ToolResult(extractText(answer));
+    }
 }
 ```
 
-普通工具拿不到 `messages`，所以 `CompactTool.execute()` 不真正压缩。`CompactingAgentLoop` 看到模型调用 `compact` 后，会先摘要历史，再把 compact 的 `tool_use/tool_result` 配对补回消息，避免下一轮 Anthropic API 收到不完整工具调用。
+Demo 中的装配 — 子工具池不含 task，TaskTool 注入子 Agent 的 client 和 tools：
 
-### 验证
-
-启动命令：
-
-```sh
-git switch s08-context-compact
-
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S08ContextCompactDemo
+```java
+// 子工具池：基础文件操作 + bash，不包含 task（防止递归委托）
+ToolRegistry subTools = baseTools(workdir);
+// 父工具池：基础工具 + task（注入子 Agent 的 client 和 tools）
+ToolRegistry parentTools = baseTools(workdir)
+        .register(new TaskTool(new AnthropicLlmClient(subConfig), subTools));
 ```
 
-真实 API smoke test：
+### 遗留问题
 
-试试这些 prompt：
+- 子 Agent 不带技能说明，某些专业任务不知道怎么做 → **s07 Skill Loading** 解决
+- 上下文还是会持续增长，没有主动压缩机制 → **s08 Context Compact** 解决
 
-1. `读取 README.md，然后读取 changelog.md，再读取 src/main/java/org/miniclaudecode/demo/s01/S01AgentLoopDemo.java`
-2. `读取 src/main/java/org/miniclaudecode/compact 下的每个文件`
-3. 反复对话 20 轮以上，观察是否出现 `[auto compact]` 或 `[reactive compact]`
+## s07 Skill Loading
 
-预期观察：
+**教学分支：** `s07-skill-loading`
 
-- 旧 `tool_result` 会被压成 `[Earlier tool result compacted. Re-run if needed.]`。
-- 大工具结果会落盘到 `.task_outputs/tool-results/`。
-- 自动或手动压缩会保存 `.transcripts/transcript_*.jsonl`。
+### 问题
 
-本次自动验证使用更短的显式 compact prompt：
+Agent 可能有很多技能说明（代码审查、测试规范、部署流程），但把所有 `SKILL.md` 全塞进 system prompt 会浪费上下文，每个技能的正文可能上千字。怎么让 Agent 知道有哪些技能可用，但只在需要时加载正文？
+
+### 功能
+
+启动时只注入技能目录（名字 + 描述），真正需要时通过 `load_skill` 工具按需加载正文。两层加载：便宜层常驻 prompt，昂贵层按需展开。
+
+新增：
+
+- `Skill`：数据类，保存 `name`、`description`、`body`
+- `SkillRegistry`：扫描 `skills/*/SKILL.md`，解析 YAML frontmatter，用 name/description 生成目录
+- `LoadSkillTool`：工具名 `load_skill`，按技能名返回 `<skill name="...">正文</skill>`
+
+### 设计
+
+两层加载，跟 s09 Memory 同样的「索引在 prompt，正文按需取」思路：
 
 ```text
-请调用 compact 工具，focus 参数写 s08-smoke，然后只回答压缩已完成。
+system prompt: "可用技能：code-review（代码审查）、java-cli（Java CLI 规范）"
+                                        ↓
+模型需要 code-review 时 → load_skill("code-review")
+                                        ↓
+返回 <skill name="code-review">检查命名、异常处理、测试覆盖...</skill>
+                                        ↓
+注入当前对话，模型按技能规范执行
 ```
 
-预期控制台出现 `Tool> compact ...`、`[transcript saved: ...]` 和 `[Compacted. History summarized.]`。
+关键设计决策：
 
-## s09：记住该记的，忘掉该忘的
+- **只列目录，不塞正文**：`SkillRegistry.getDescriptions()` 只输出「名字：描述」列表放入 system prompt，几乎不占 token
+- **按名查找，防路径穿越**：`load_skill` 只接受已扫描到的技能名，不接受文件路径
+- **XML 标签包裹**：加载后的正文用 `<skill name="...">` 包裹，让模型明确知道这是技能指令
+
+### 实现
+
+`SkillRegistry` — 扫描 `skills/*/SKILL.md`，解析 YAML frontmatter：
+
+```java
+public class SkillRegistry {
+    private final Map<String, Skill> skills = new LinkedHashMap<>();
+
+    public SkillRegistry(File skillsDir) {
+        File[] dirs = skillsDir.listFiles(File::isDirectory);
+        for (File dir : dirs) {
+            File skillFile = new File(dir, "SKILL.md");
+            if (!skillFile.isFile()) continue;
+            String raw = Files.readString(skillFile.toPath(), StandardCharsets.UTF_8);
+            Skill skill = parse(dir.getName(), raw);  // fallbackName = 目录名
+            skills.put(skill.getName(), skill);
+        }
+    }
+
+    private Skill parse(String fallbackName, String raw) {
+        String name = fallbackName;
+        String body = raw;
+        if (raw.startsWith("---")) {
+            String[] parts = raw.split("---", 3);
+            // 解析 frontmatter 中的 name: / description:
+            for (String line : parts[1].split("\\R")) {
+                if (line.startsWith("name:")) name = line.substring(5).trim();
+                else if (line.startsWith("description:")) description = line.substring(12).trim();
+            }
+            body = parts[2].trim();  // frontmatter 之后的内容是正文
+        }
+        return new Skill(name, description, body);
+    }
+
+    public String getDescriptions() {
+        // 目录只放技能名和一句话描述
+        StringBuilder sb = new StringBuilder();
+        for (Skill skill : skills.values()) {
+            sb.append("  - ").append(skill.getName()).append(": ").append(skill.getDescription()).append("\n");
+        }
+        return sb.toString();
+    }
+}
+```
+
+`LoadSkillTool.execute()` — 按名查找，`<skill>` 标签包裹返回：
+
+```java
+public ToolResult execute(JSONObject input) {
+    String name = input.getString("name");
+    Skill skill = skillRegistry.find(name);
+    if (skill == null) {
+        return new ToolResult("Skill not found: " + name);
+    }
+    return new ToolResult("<skill name=\"" + skill.getName() + "\">\n"
+        + skill.getBody() + "\n</skill>");
+}
+```
+
+技能文件示例 `skills/code-review/SKILL.md`：
+
+```markdown
+---
+name: code-review
+description: 代码审查技能
+---
+审查代码时，请检查以下方面：
+1. 命名规范
+2. 异常处理
+3. 测试覆盖
+4. 潜在的性能问题
+```
+
+### 遗留问题
+
+- 对话历史越来越长，即使技能按需加载，上下文还是持续增长会满 → **s08 Context Compact** 解决
+- 技能文件是静态的，没有用户偏好和项目事实的持久记忆 → **s09 Memory** 解决
+
+## s08 Context Compact
+
+**教学分支：** `s08-context-compact`
+
+### 问题
+
+工具输出和多轮对话持续挤占上下文窗口。模型上下文有上限（如 200K token），满了就报 `prompt_is_too_long` 错误或静默截断。怎么在 LLM 调用前主动腾空间？
+
+### 功能
+
+在 AgentLoop 调用 LLM 前插入四层压缩管线，按成本和保真度从低到高依次执行。同时提供 `compact` 工具让模型显式触发摘要。
+
+新增：
+
+- `CompactingAgentLoop`：s08 专用循环，在 LLM 调用前运行压缩管线，拦截 `compact` 工具特殊处理
+- `CompactionPipeline`：按固定顺序执行四层压缩
+- `MessageInspector`：判断消息是否含 tool_use/tool_result、估算消息大小
+- `ToolResultStore`：大工具结果落盘到 `.task_outputs/tool-results/`
+- `TranscriptStore`：压缩前保存完整历史到 `.transcripts/transcript_*.jsonl`
+- `CompactTool`：暴露 `compact` 工具定义，真正压缩由循环处理
+
+### 设计
+
+四层压缩，按开销从低到高依次执行：
+
+```text
+1. toolResultBudget（最后一条 tool_result > 200KB）
+   → 原文落盘，上下文中只留文件路径 + 截断预览
+2. snipCompact（消息数 > 50 条）
+   → 裁掉中间历史，保留前 3 条和后 47 条
+   → 保护 assistant(tool_use) 和 user(tool_result) 配对被拆散
+3. microCompact（旧 tool_result 太多）
+   → 保留最近 3 条完整结果，旧的替换为 "[Earlier tool result compacted. Re-run if needed.]"
+4. compactHistory（还是 > 50KB）
+   → 最终手段：调 LLM 生成摘要，摘要前保存完整 transcript 到 .transcripts/
+```
+
+关键设计决策：
+
+- **顺序不能换**：便宜的、保真度高的先做，昂贵的 LLM 摘要最后才用
+- **pair 保护**：snipCompact 裁剪时不能拆散 `assistant(tool_use)` 和紧接着的 `user(tool_result)`，否则 Anthropic API 会因为不配对而拒绝请求
+- **compact 工具特殊处理**：模型调用 `compact` 时，循环自己执行压缩（工具不真正执行），并手动把 `tool_use` 和 `tool_result` 配对补回 messages，避免下一轮 API 收到不完整的工具调用
+- **被动压缩**：除了四层主动压缩管线，当 LLM 返回 `prompt_is_too_long` 错误时，循环自动执行 `compactHistory` 摘要并重试，不把错误暴露给用户
+
+### 实现
+
+`CompactionPipeline` — 四个私有方法 + 两个公共入口：
+
+```java
+public class CompactionPipeline {
+    private static final int MAX_MESSAGES = 50;
+    private static final int KEEP_RECENT_TOOL_RESULTS = 3;
+    private static final int TOOL_RESULT_BUDGET = 200_000;   // 200KB
+    private static final int AUTO_COMPACT_THRESHOLD = 50_000; // 50KB
+
+    // 每轮 LLM 调用前自动执行（不报错，尽量腾空间）
+    public void beforeLlm(List<Message> messages) {
+        toolResultBudget(messages);   // 第 1 层
+        snipCompact(messages);        // 第 2 层
+        microCompact(messages);       // 第 3 层
+        if (inspector.estimateSize(messages) > AUTO_COMPACT_THRESHOLD) {
+            replaceAll(messages, compactHistory(messages, "auto compact"));  // 第 4 层
+        }
+    }
+
+    // 模型调 compact 工具或 prompt_is_too_long 时触发
+    public List<Message> compactHistory(List<Message> messages, String focus) {
+        transcriptStore.write(messages);  // 先保存完整 transcript
+        AssistantMessage summary = summaryClient.chat(
+            List.of(Message.user("Summarize: ..." + focus)), List.of());
+        return List.of(Message.user("[Compacted]\n\n" + extractText(summary)));
+    }
+
+    // prompt_is_too_long 后的被动压缩：保留最近 10 条 + 摘要
+    public List<Message> reactiveCompact(List<Message> messages) {
+        List<Message> compacted = new ArrayList<>(compactHistory(messages, "reactive"));
+        int start = Math.max(0, messages.size() - 10);
+        for (int i = start; i < messages.size(); i++) compacted.add(messages.get(i));
+        return compacted;
+    }
+}
+```
+
+`CompactingAgentLoop` — LLM 调用前跑管线 + 捕获 `prompt_is_too_long`：
+
+```java
+// 每轮 LLM 调用前
+pipeline.beforeLlm(messages);
+
+try {
+    response = llmClient.chat(messages, toolDefinitions());
+} catch (PromptTooLongException e) {
+    // 被动压缩：摘要 + 保留最近历史
+    messages = pipeline.reactiveCompact(messages);
+    response = llmClient.chat(messages, toolDefinitions());
+}
+```
+
+### 遗留问题
+
+- 压缩会丢失用户偏好和反馈等隐性信息 → **s09 Memory** 在压缩前提取记忆
+- 压缩管线参数（阈值、保留条数）硬编码 → 生产系统需要可配置
+
+## s09 Memory
 
 **教学分支：** `s09-memory`
 
-s09 解决的问题是：Agent 不能把所有历史都塞进上下文，但也不能忘掉稳定偏好、项目事实和用户反馈。最小解法是把记忆存成文件，用索引常驻 prompt，用正文按需注入。
+### 问题
 
-本章新增：
+上下文压缩会丢掉用户偏好（"我喜欢 tab 缩进"）、项目事实（"这个项目用 Java 17"）和反馈（"上次那个方案不行"）。这些信息不应该只存在对话历史里——历史会被压缩清掉。怎么持久化该记的，忘掉该忘的？
 
-- `Memory`：普通 Java 数据类，保存文件名、名称、描述、类型和正文。
-- `MemoryStore`：管理 `.memory/*.md` 和 `.memory/MEMORY.md` 索引。
-- `MemorySelector`：根据当前对话选择最多 5 条相关记忆，LLM 选择失败时用关键词降级。
-- `MemoryExtractor`：每轮结束后从近期对话提取用户偏好、约束、项目事实或引用。
-- `MemoryConsolidator`：记忆文件达到阈值后合并去重。
-- `MemoryManager`：组合筛选、提取、整理三个子系统。
-- `MemoryAgentLoop`：包住 s08 的压缩循环，在停止后触发记忆提取。
-- `S09MemoryDemo`：注册 `bash/read_file/write_file/edit_file/glob/task`，并在每轮开始重建带记忆索引的 system prompt。
+### 功能
 
-### 三个子系统
+把记忆存成 `.memory/` 下的 Markdown 文件，用 `MEMORY.md` 索引常驻 prompt，正文按需注入。三个子系统各司其职：筛选（选相关记忆）、提取（从对话中提取新记忆）、整理（去重合并）。
 
-s09 的记忆系统拆成三块：
+新增：
+
+- `Memory`：数据类，filename、name、description、type、body
+- `MemoryStore`：管理 `.memory/*.md` 文件和 `.memory/MEMORY.md` 索引
+- `MemorySelector`：根据当前请求选择最多 5 条相关记忆，LLM 失败时关键词降级
+- `MemoryExtractor`：每轮结束后从压缩前快照中提取新记忆
+- `MemoryConsolidator`：记忆文件达到 10 个时合并去重
+- `MemoryManager`：组合筛选、提取、整理三个子系统
+- `MemoryAgentLoop`：包装 s08 压缩循环，每轮前后注入记忆逻辑
+
+### 设计
+
+跟 s07 技能加载同一个思路——索引在 prompt，正文按需取：
 
 ```text
-筛选：根据当前请求，从 MEMORY.md 索引中选择相关记忆文件
-提取：每轮结束后，从压缩前上下文提取新记忆
-整理：文件数量达到阈值后，合并重复或过期记忆
+每轮开始：
+  1. 注入 MEMORY.md 索引到 system prompt（便宜）
+  2. MemorySelector 根据当前请求选最多 5 条相关记忆
+  3. 相关记忆正文包在 <relevant_memories> 中注入
+
+每轮结束：
+  4. 在压缩前保存 messages 快照
+  5. MemoryExtractor 从快照中提取新记忆（用压缩前快照，避免细节被抹掉）
+  6. 写入 .memory/{name}.md，更新 MEMORY.md 索引
+
+整理：
+  7. 记忆文件达到 10 个时触发 MemoryConsolidator，合并去重
 ```
 
-`MEMORY.md` 只是一份便宜索引，格式类似：
-
-```markdown
-- [user-preference-tabs](user-preference-tabs.md) - User prefers tabs for indentation
-```
-
-完整正文仍保存在独立 Markdown 文件里：
+记忆文件格式（`.memory/user-preference-tabs.md`）：
 
 ```markdown
 ---
@@ -729,106 +895,109 @@ type: user
 User prefers using tabs, not spaces, for indentation.
 ```
 
-这样每轮 system prompt 只带索引，真正相关时才把正文包进 `<relevant_memories>`。这和 s07 的技能加载思路相同：先列目录，用到时再展开。
+`MEMORY.md` 索引格式：
 
-### 循环位置
-
-本章复用 s08 的 `CompactingAgentLoop`，但在外层新增 `MemoryAgentLoop`：
-
-```text
-用户输入
-  -> 注入相关记忆
-  -> 保存压缩前快照
-  -> 运行 s08 压缩循环
-  -> 本轮结束后提取记忆
+```markdown
+- [user-preference-tabs](user-preference-tabs.md) — User prefers tabs for indentation
 ```
 
-提取使用压缩前快照，是因为摘要可能抹掉用户偏好和反馈里的细节。教学版没有实现后台 Dream、锁和时间门控，整理只用“文件数量达到 10”这个简单阈值，便于直接观察。
+关键设计决策：
 
-### 验证
+- **提取用压缩前快照**：压缩会把细节抹掉，用户偏好和反馈里的 nuance 可能被摘要吞掉，所以提取必须在压缩前做
+- **MS 降级兜底**：MemorySelector 优先用 LLM 选相关记忆，LLM 调用失败时用关键词匹配保底
+- **去重而非覆盖**：新记忆写入前跟已有记忆比对 name + description，重复的跳过而非覆盖
+- **整理阈值简单化**：教学版只用「文件数达到 10」触发整理，不做时间门控和后台 Dream
 
-启动命令：
+### 实现
 
-```sh
-git switch s09-memory
+`MemoryAgentLoop.run()` — 极简包装，快照由外部传入，提取委托给 MemoryManager：
 
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
+```java
+public class MemoryAgentLoop {
+    private final CompactingAgentLoop compactingLoop;
+    private final MemoryManager memoryManager;
 
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S09MemoryDemo
+    public AssistantMessage run(List<Message> messages, List<Message> preCompactSnapshot) {
+        AssistantMessage answer = compactingLoop.run(messages);
+        // 提取记忆要使用压缩前的上下文，避免摘要抹掉用户偏好、反馈等细节
+        memoryManager.afterTurn(preCompactSnapshot);
+        return answer;
+    }
+
+    // snapshot() 方法在 demo 中调用，深拷贝所有 ContentBlock 类型
+    public List<Message> snapshot(List<Message> messages) { ... }
+}
 ```
 
-真实 API smoke test：
+Demo 中的调用顺序：
 
-试试这些 prompt（分多轮输入，观察记忆的累积和加载）：
+```java
+// 每轮开始：注入相关记忆到 system prompt
+List<Memory> relevant = memoryManager.selectRelevant(query);
+// ... 重建 system prompt，包入 <relevant_memories>
 
-1. `我喜欢使用 tabs 缩进，而不是 spaces。请记住这一点。`
-2. `创建一个名为 test.py 的 Python 文件`
-3. `我之前告诉过你哪些偏好？`
-4. `我还喜欢字符串使用单引号，而不是双引号。`
+// 压缩前保存快照
+List<Message> snapshot = memoryLoop.snapshot(history);
 
-预期观察：
-
-- 第一轮结束后出现 `[Memory: extracted N new memories]`。
-- `.memory/` 目录下生成独立记忆文件。
-- `.memory/MEMORY.md` 包含偏好索引。
-- 后续对话会自动加载相关记忆，并在回答或写文件时体现偏好。
-
-本次自动验证使用更短的两轮 prompt：
-
-```text
-请记住：我喜欢 Java demo 使用 tabs 缩进。只回答已记录。
-我之前说过什么 Java demo 偏好？请根据记忆回答。
+// 运行 MemoryAgentLoop（内部调用 s08 压缩循环）
+AssistantMessage answer = memoryLoop.run(history, snapshot);
+// afterTurn 在 run() 内部自动调用，从 snapshot 提取记忆
 ```
 
-预期控制台出现 `[Memory: extracted ...]`，第二轮回答提到 `Java demo` 和 `tabs`。
+### 遗留问题
 
-### 源码注释补充
+- 记忆只在当前会话结束前提取，没有后台 Dream 阶段做深度反思和整理 → 生产版需要后台记忆加工
+- Todo 只存内存，任务列表不能跨会话恢复 → **s10 Task System** 持久化任务图
 
-本章为核心源码补充了中文注释，重点解释为什么索引常驻 prompt、为什么正文按需注入，以及为什么提取要使用压缩前快照。
-
-### 提示词位置调整
-
-本章将父 Agent 和子 Agent 的 system prompt 分别作为 `S09MemoryDemo` 顶部的 `SYSTEM_PROMPT_TEMPLATE` 与 `SUBAGENT_SYSTEM_PROMPT` 静态变量。
-
-父 Agent 的提示词对齐参考实现：说明当前工作目录、可用记忆索引、相关记忆会被注入下方，以及遇到明确偏好或 remember 请求时应提取为记忆。
-
-## s10：大目标拆成小任务，排好序，持久化
+## s10 Task System
 
 **教学分支：** `s10-task-system`
 
-s10 对齐参考项目的 `s12_task_system`。本章解决的问题是：TodoWrite 适合当前会话里的执行清单，但大目标需要跨会话恢复、表达依赖顺序，并让后续多 Agent 协作有一个共同任务图。
+### 问题
 
-本章新增：
+s05 的 TodoWrite 只在内存里，会话结束就没了。大目标需要跨会话恢复、表达任务间的依赖顺序（A 完成才能做 B），并为后续多 Agent 协作准备一个共享的任务图。怎么把 Todo 从「会话内清单」升级为「持久化任务图」？
 
-- `TaskRecord`：普通 Java 数据类，对应 `.tasks/{id}.json`。
-- `TaskStore`：管理 `.tasks/` 目录，负责任务 JSON 读写和列表扫描。
-- `TaskService`：实现 `pending -> in_progress -> completed` 状态机和 `blockedBy` 依赖检查。
-- `CreateTaskTool`：创建持久化任务，可带上游依赖。
-- `ListTasksTool`：列出任务状态、owner 和依赖。
-- `GetTaskTool`：读取单个任务完整 JSON。
-- `ClaimTaskTool`：认领可开始的任务，设置 owner 并改为 `in_progress`。
-- `CompleteTaskTool`：完成任务，并报告刚刚解锁的下游任务。
-- `S10TaskSystemDemo`：注册 `bash/read_file/write_file/create_task/list_tasks/get_task/claim_task/complete_task`。
+### 功能
 
-### Task System vs TodoWrite
+引入持久化任务系统：每个任务存为 `.tasks/task_{id}.json`，支持状态机（pending → in_progress → completed）、依赖检查（blockedBy）和 owner 认领。
 
-TodoWrite 和 Task System 是两个独立层：
+新增：
+
+- `TaskRecord`：数据类，id、subject、description、status、owner、blockedBy
+- `TaskStore`：管理 `.tasks/` 目录，任务 JSON 读写和列表扫描
+- `TaskService`：状态机 + blockedBy 依赖检查
+- `CreateTaskTool`：创建持久化任务，可带上游依赖
+- `ListTasksTool`：列出所有任务的状态、owner 和依赖
+- `GetTaskTool`：读取单个任务完整 JSON
+- `ClaimTaskTool`：认领可开始的任务，设置 owner 并改为 in_progress
+- `CompleteTaskTool`：完成任务，报告新解锁的下游任务
+
+### 设计
+
+跟 s05 TodoWrite 的定位区分：
 
 | | TodoWrite (s05) | Task System (s10) |
 |---|---|---|
-| 定位 | 当前任务的执行清单 | 可恢复的任务图 |
-| 存储 | 会话内存 | `.tasks/{id}.json` |
-| 依赖 | 无 | `blockedBy` |
+| 定位 | 当前任务的执行清单 | 可跨会话恢复的任务图 |
+| 存储 | 会话内存 | `.tasks/{id}.json` 持久化 |
+| 依赖 | 无 | `blockedBy` 数组 |
 | 生命周期 | 当前会话 | 跨会话保留 |
-| 分工 | 不负责任务认领 | `owner` / claim |
+| 分工 | 不负责任务分配 | `owner` + claim |
 
-所以 s10 没有复用 `todo_write`，也没有注册 s06 的 `task` 子 Agent 工具。本章只展示“持久化任务图”这一件事。
+状态机只有三种状态：
 
-### 持久化格式
+```text
+pending → in_progress → completed
+```
 
-每个任务是一个 JSON 文件：
+`claim_task` 是唯一从 pending 推进到 in_progress 的入口。认领前检查所有 blockedBy：
+- 依赖任务不存在 → blocked
+- 任一依赖不是 completed → blocked
+- 所有依赖已完成 → 允许认领
+
+`complete_task` 只允许完成 in_progress 的任务。完成后自动扫描所有 pending 任务，报告哪些任务的依赖刚刚被满足（Unblocked）。
+
+任务持久化格式（`.tasks/task_1781770000000_0427.json`）：
 
 ```json
 {
@@ -841,158 +1010,111 @@ TodoWrite 和 Task System 是两个独立层：
 }
 ```
 
-`TaskStore` 只扫描 `.tasks/task_*.json`，并按文件名排序。单个坏文件会被跳过，避免一个损坏任务让 demo 无法启动。
+### 实现
 
-### 依赖和状态机
+`TaskService` — 状态机 + 依赖检查（返回消息字符串，不抛异常）：
 
-任务状态只有三种：
+```java
+public class TaskService {
+    private final TaskStore store;
 
-```text
-pending -> in_progress -> completed
-```
+    public String claimTask(String taskId, String owner) {
+        TaskRecord task = store.load(taskId);
+        if (!"pending".equals(task.getStatus())) {
+            return "Task " + taskId + " is " + task.getStatus() + ", cannot claim";
+        }
+        List<String> blocked = blockingDependencies(task);
+        if (!blocked.isEmpty()) {
+            return "Blocked by: " + blocked;
+        }
+        task.setOwner(owner == null || owner.isBlank() ? "agent" : owner);
+        task.setStatus("in_progress");
+        store.save(task);
+        return "Claimed " + task.getId() + " (" + task.getSubject() + ")";
+    }
 
-`claim_task` 是唯一把 `pending` 推进到 `in_progress` 的动作。认领前必须先检查 `blockedBy`：
+    public String completeTask(String taskId) {
+        TaskRecord task = store.load(taskId);
+        if (!"in_progress".equals(task.getStatus())) {
+            return "Task " + taskId + " is " + task.getStatus() + ", cannot complete";
+        }
+        task.setStatus("completed");
+        store.save(task);
+        List<String> unblocked = findUnblockedSubjects();
+        String msg = "Completed " + task.getId();
+        if (!unblocked.isEmpty()) {
+            msg += "\nUnblocked: " + String.join(", ", unblocked);
+        }
+        return msg;
+    }
 
-- 依赖任务不存在：视为 blocked。
-- 任一依赖不是 `completed`：视为 blocked。
-- 所有依赖都完成：允许认领。
-
-`complete_task` 只允许完成 `in_progress` 任务。完成后会扫描其他 `pending` 任务，把新解锁的下游任务列在 `Unblocked:` 后面。
-
-### 五个工具
-
-`create_task`：
-
-```json
-{
-  "name": "create_task",
-  "description": "Create a new task with optional blockedBy dependencies.",
-  "input_schema": {
-    "type": "object",
-    "properties": {
-      "subject": {"type": "string"},
-      "description": {"type": "string"},
-      "blockedBy": {"type": "array", "items": {"type": "string"}}
-    },
-    "required": ["subject"]
-  }
+    private List<String> blockingDependencies(TaskRecord task) {
+        List<String> blocked = new ArrayList<>();
+        for (String depId : task.getBlockedBy()) {
+            if (!store.exists(depId) || !"completed".equals(store.load(depId).getStatus()))
+                blocked.add(depId);
+        }
+        return blocked;
+    }
 }
 ```
 
-`list_tasks` 列出所有任务摘要；`get_task` 返回完整 JSON；`claim_task` 设置 owner 并改为 `in_progress`；`complete_task` 标记完成并报告解锁结果。
+### 遗留问题
 
-### 验证
+- 慢操作（npm install、docker build）Agent 同步等待，浪费时间 → **s11 Background Tasks** 解决
+- 认领无并发保护，多 Agent 可能同时 claim 同一任务 → 教学版用 owner 检查兜底，生产需要文件锁
 
-启动命令：
-
-```sh
-git switch s10-task-system
-
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S10TaskSystemDemo
-```
-
-真实 API smoke test：
-
-试试这些 prompt：
-
-1. `创建任务：设置数据库 schema、创建 API endpoints（依赖 schema）、编写测试（依赖 endpoints）、编写文档（依赖 schema）`
-2. `列出所有任务和状态`
-3. `认领第一个未被阻塞的任务并完成它`
-4. `再次列出任务，哪些任务现在被解锁了？`
-
-预期观察：
-
-- 控制台出现 `Tool> create_task`、`Tool> list_tasks`、`Tool> claim_task`、`Tool> complete_task`。
-- `.tasks/` 目录下生成多个 `task_*.json` 文件。
-- 完成 schema 任务后，依赖 schema 的 API endpoints 和 docs 会出现在 `Unblocked:` 中。
-
-### 源码注释补充
-
-本章为任务核心类补充了中文注释，重点解释为什么存储层不处理状态机、为什么缺失依赖也视为 blocked，以及为什么任务工具只做参数转换和服务调用。
-
-### 提示词位置调整
-
-本章将 system prompt 放在 `S10TaskSystemDemo` 顶部的 `SYSTEM_PROMPT` 静态变量中，内容对齐参考实现的三段：身份、可用工具、工作目录。
-
-## s11：慢操作丢后台，agent 继续思考
+## s11 Background Tasks
 
 **教学分支：** `s11-background-tasks`
 
-本章解决的问题是：`npm install` 要 3 分钟，Agent 干等就是浪费。最小解法是把慢操作扔到 daemon 线程执行，先回占位结果让 Agent 继续工作，后台完成后通知注入下一轮。
+### 问题
 
-本章对齐 `learn-claude-code/s13_background_tasks`。
+`npm install` 要 3 分钟，`docker build` 更久。Agent 同步等结果，期间不做任何事。怎么让慢操作在后台执行，Agent 继续处理其他工作？
 
-### 核心变化
+### 功能
 
-s11 在 s10 任务系统基础上新增后台执行路径：
+对 bash 工具引入后台执行路径。慢操作丢到 daemon 线程，立即返回占位结果让 Agent 继续思考，后台完成后以 `<task_notification>` XML 注入下一轮对话。
+
+新增：
+
+- `BackgroundTask`：数据类，bgId、toolUseId、command、status
+- `BackgroundDecider`：两层判断逻辑（显式参数 + 关键词兜底）
+- `BackgroundTasks`：daemon 线程管理器，ConcurrentHashMap + AtomicInteger 保证线程安全
+- `BackgroundAgentLoop`：s11 专用循环，内置同步/后台两条执行路径和通知注入
+
+### 设计
+
+两条执行路径，由 BackgroundDecider 决定走哪条：
 
 ```text
-工具调用 → should_run_background?
-  ├─ false → 同步执行 → tool_result 立即返回
-  └─ true  → daemon 线程 → 占位 tool_result → 下轮 <task_notification>
+工具调用 → BackgroundDecider.shouldRunBackground()
+              ├─ false → 同步执行 → tool_result 立即返回
+              └─ true  → daemon 线程 → 占位 tool_result → 下轮 <task_notification>
 ```
 
-同步 vs 后台：
+时序示例——Agent 不等 npm install：
 
-| | 同步 (s10) | 后台 (s11) |
-|---|---|---|
-| 慢操作 | Agent 干等 | 后台线程执行 |
-| Agent 空闲 | 是 | 否，继续处理 |
-| 结果 | 立即返回 | 下轮注入通知 |
-| 判断标准 | — | `run_in_background` 参数（模型显式请求），启发式兜底 |
+```text
+Turn 1: LLM → bash "npm install" (run_in_background=true)
+        → [background] dispatched bg_0001
+        → tool_result: "[Background task bg_0001 started]"
+        → LLM: "已把 npm install 放后台，我先读一下 package.json"
 
-### 工作流程
-
-```
-Turn 1:
-  LLM → bash "npm install" (run_in_background=true)
-  → start_background_task → bg_0001
-  → tool_result: "[Background task bg_0001 started]..."
-  → LLM: "已把 npm install 放到后台，我先读一下 package.json"
-
-Turn 2:
-  LLM → read_file "package.json" (同步，毫秒级)
-  → tool_result: 文件内容
-  → collect_background_results: bg_0001 完成！注入 <task_notification>
-  → LLM 在同一条消息里看到: package.json 内容 + npm install 完成通知
+Turn 2: LLM → read_file "package.json"（同步，毫秒级）
+        → [background done] bg_0001 completed
+        → 注入 <task_notification>
+        → LLM 同时看到 package.json 内容 + npm install 完成通知
 ```
 
-Agent 没有干等 `npm install`，后台执行期间它去读了配置文件。
+判断逻辑两层：
 
-### 本章新增
+1. 模型显式设置 `run_in_background=true` → 直接走后台（主路径）
+2. 命令含 `install/build/test/deploy/compile/docker/pip/npm/cargo/pytest/make` 等关键词 → 兜底
 
-- `BackgroundTask`：后台任务状态数据类（`bgId`、`toolUseId`、`command`、`status`）。
-- `BackgroundDecider`：判断逻辑——显式 `run_in_background=true` 优先，关键词启发式兜底（`install/build/test/deploy/compile/docker build/pip install/npm install/cargo build/pytest/make`）。
-- `BackgroundTasks`：daemon 线程管理器，`ConcurrentHashMap` 保证线程安全，`AtomicInteger` 生成唯一 bg_id。
-- `BackgroundAgentLoop`：s11 专用循环，内置两条执行路径（同步/后台）和通知注入。
-- `S11BackgroundTasksDemo`：注册 8 个工具（bash + 5 任务工具 + read/write），bash 新增 `run_in_background` 参数。
+只对 bash 生效，read_file/write_file 等工具永远同步执行。
 
-### 判断逻辑
-
-两层判断：
-
-1. 模型显式设置 `run_in_background=true` → 走后台（主路径）。
-2. 命令含慢操作关键词 → 关键词兜底（保底路径）。
-
-只对 `bash` 工具生效。其他工具（read_file、write_file 等）永远同步执行。
-
-### 后台任务管理器
-
-`BackgroundTasks`：
-
-- `start(block, registry)`：创建 daemon 线程执行工具，立即返回 `bg_0001` 格式的 ID。
-- `collectNotifications()`：收集已完成任务，返回 `<task_notification>` XML 文本列表，从 map 中移除已完成任务。
-- 线程安全：`ConcurrentHashMap` + `AtomicInteger`，不加显式锁。
-- 超时：bash 工具自身有 120 秒超时，教学版不额外加后台超时控制。
-- daemon 线程：进程退出时自动终止。
-
-### 通知格式
-
-后台完成后以 `<task_notification>` XML 注入，不复用原始 `tool_use_id`：
+通知格式不复用原始 `tool_use_id`——原始调用已用占位 tool_result 回复了，后台完成是独立事件：
 
 ```xml
 <task_notification>
@@ -1003,48 +1125,590 @@ Agent 没有干等 `npm install`，后台执行期间它去读了配置文件。
 </task_notification>
 ```
 
-不复用 `tool_use_id` 的原因：原始 tool call 已经用占位 `tool_result` 回复了，后台完成是独立事件，这符合 Messages API 的工具配对语义（一个 `tool_use` 只对应一个 `tool_result`）。
+### 实现
 
-### 循环集成
+`BackgroundAgentLoop.executeToolUses()` — 核心分派逻辑：
 
-`BackgroundAgentLoop` 是独立类（不继承 `AgentLoop`），参照 `CompactingAgentLoop` 的模式：
+```java
+private List<ToolResultBlock> executeToolUses(AssistantMessage response) {
+    List<ToolResultBlock> results = new ArrayList<>();
+    for (ContentBlock block : response.getContent()) {
+        if (block instanceof ToolUseBlock) {
+            ToolUseBlock toolUse = (ToolUseBlock) block;
+            ToolResult result;
+            if (BackgroundDecider.shouldRunBackground(toolUse.getName(), toolUse.getInput())) {
+                // 后台路径：daemon 线程 + 占位 tool_result
+                String bgId = backgroundTasks.start(toolUse, toolRegistry);
+                result = new ToolResult("[Background task " + bgId + " started] ...");
+            } else {
+                // 同步路径
+                result = executeTool(toolUse);
+            }
+            results.add(new ToolResultBlock(toolUse.getId(), result.getContent()));
+        }
+    }
+    return results;
+}
 
-- 每轮 LLM 调用前，先调用 `collectNotifications()` 注入上轮后台完成通知。
-- 工具执行时，`BackgroundDecider.shouldRunBackground()` 判断走同步还是后台路径。
-- 后台路径：`backgroundTasks.start()` → 占位 tool_result。
-- 同步路径：直接 `tool.execute()`。
-
-### 验证
-
-启动命令：
-
-```sh
-git switch s11-background-tasks
-
-export ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'
-export MODEL_ID='deepseek-v4-pro'
-export ANTHROPIC_API_KEY='你的 API Key'
-
-mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S11BackgroundTasksDemo
+// 每轮 LLM 调用前，收集已完成通知注入为一条 user 消息
+private void injectBackgroundNotifications(List<Message> messages) {
+    List<String> notifications = backgroundTasks.collectNotifications();
+    if (!notifications.isEmpty()) {
+        StringBuilder sb = new StringBuilder();
+        for (String notif : notifications) sb.append(notif).append("\n");
+        messages.add(Message.user(sb.toString().trim()));
+    }
+}
 ```
 
-真实 API smoke test，试试这些 prompt：
+### 遗留问题
 
-1. `后台运行 pip list，同时查找当前目录中的所有 Python 文件`
-2. `使用 run_in_background 运行 npm install，在等待的同时读取 package.json`
-3. `创建一个设置项目的任务，然后在后台运行 pip list`
+- Agent 只在用户输入时才工作，无法定时自触发 → **s12 Cron Scheduler** 解决
+- 后台任务无超时控制，线程泄漏风险 → 教学版靠 daemon 线程保证进程退出时自动终止
 
-观察重点：
+## s12 Cron Scheduler
 
-- 慢操作是否出现 `[background] dispatched bg_0001: ...`？
-- 后台执行期间 Agent 是否继续处理其他工具调用？
-- 后台完成后是否出现 `[background done] bg_0001: ...` 和 `[inject]`？
-- 下一轮是否注入 `<task_notification>`？
+**教学分支：** `s12-cron-scheduler`
 
-### 源码注释补充
+### 问题
 
-本章为核心源码补充了中文注释，重点解释 `shouldRunBackground` 的两层判断、daemon 线程的生命周期、`ConcurrentHashMap` 的线程安全策略，以及为什么通知不复用原始 `tool_use_id`。
+Agent 只在用户输入时才工作。如果想让 Agent 每天早上 9 点自动检查构建状态，或者在指定时间触发任务，目前做不到。怎么让 Agent 拥有定时自触发的能力？
 
-### 提示词位置调整
+### 功能
 
-本章将 system prompt 作为 `S11BackgroundTasksDemo` 顶部的 `SYSTEM_PROMPT` 静态变量，提示词中明确告知模型 bash 工具有可选的 `run_in_background` 参数。
+引入 cron 表达式驱动的定时调度器。Agent 可以注册、列出、取消定时任务，到点自动注入 `[Scheduled]` 消息运行 Agent。支持持久化，重启后恢复。
+
+新增：
+
+- `CronJob`：数据类，id、cron 表达式、prompt、recurring、durable
+- `CronStore`：持久化 durable 任务到 `.scheduled_tasks.json`
+- `CronScheduler`：委托 Hutool CronUtil，两层校验（5 段检查 + CronPattern.of 解析），触发时回调 `Consumer<CronJob>`
+- `ScheduleCronTool`：注册 cron 任务
+- `ListCronsTool`：列出活跃任务
+- `CancelCronTool`：取消任务
+
+### 设计
+
+用 Hutool CronUtil 实现，不引入新依赖、不自写 cron 解析器：
+
+```text
+schedule_cron("0 9 * * *", "检查构建状态")
+  → CronScheduler.schedule()
+  → Hutool CronUtil 注册定时任务
+  → 到点触发 callback
+  → agentLock 内注入 [Scheduled] 检查构建状态
+  → BackgroundAgentLoop.run()
+```
+
+关键设计决策：
+
+- **agentLock 串行化**：cron 触发和用户输入不能同时运行 Agent，共享同一份 `history`。用 `synchronized` 保护，cron 触发时如果 Agent 正忙则排队等待
+- **两层校验**：先用 5 段式正则检查基本格式，再用 Hutool `CronPattern.of()` 解析语义，格式错误在注册时就报出来
+- **持久化**：`durable=true` 的任务写入 `.scheduled_tasks.json`，启动时从文件重新注册到 Hutool，恢复定时触发
+- **两个触发源，一个循环**：cron 触发时构造 `[Scheduled] <prompt>` 作为用户消息注入，跟手动输入走同一个 AgentLoop
+
+### 实现
+
+`CronScheduler` — 构造函数注入 `Consumer<CronJob>` 回调，`schedule()` 返回消息字符串：
+
+```java
+public class CronScheduler {
+    private final CronStore store;
+    private final Consumer<CronJob> onFire;
+    private final Map<String, CronJob> jobs = new ConcurrentHashMap<>();
+
+    public CronScheduler(CronStore store, Consumer<CronJob> onFire) {
+        this.store = store;
+        this.onFire = onFire;
+    }
+
+    public void start() {
+        // 从磁盘加载 durable job 并重新注册到 Hutool
+        for (CronJob job : store.load()) {
+            jobs.put(job.getId(), job);
+            CronUtil.schedule(job.getId(), job.getCron(), new CronTask(job.getId()));
+        }
+        CronUtil.setMatchSecond(false);
+        CronUtil.start();
+    }
+
+    public String schedule(String cron, String prompt, boolean recurring, boolean durable) {
+        String err = validateCron(cron);
+        if (err != null) return "Error: " + err;
+        String id = "cron_" + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000000));
+        CronJob job = new CronJob(id, cron, prompt, recurring, durable);
+        jobs.put(id, job);
+        CronUtil.schedule(id, cron, new CronTask(id));
+        if (durable) store.save(new ArrayList<>(jobs.values()));
+        return "Scheduled " + id + ": " + prompt;
+    }
+
+    // 内部 CronTask：触发时从 jobs map 查找并回调 onFire，一次性任务自动取消
+    private class CronTask implements Task {
+        public void execute() {
+            CronJob job = jobs.get(jobId);
+            if (job != null) { onFire.accept(job); }
+            if (!job.isRecurring()) cancel(jobId);
+        }
+    }
+}
+```
+
+Demo 中构造 CronScheduler，agentLock 在回调中保护：
+
+```java
+CronScheduler scheduler = new CronScheduler(new CronStore(workdir), job -> {
+    synchronized (agentLock) {
+        agentLoop.run("[Scheduled] " + job.getPrompt());
+    }
+});
+scheduler.start();
+```
+
+### 遗留问题
+
+- 单个 Agent 处理所有事，复杂任务超出单个注意力范围 → **s13 Agent Teams** 解决
+- cron 触发和用户输入共用 history，用户输入优先 → 合理的教学简化，生产系统需要独立的会话管理
+
+## s13 Agent Teams
+
+**教学分支：** `s13-agent-teams`
+
+### 问题
+
+单个 Agent 处理复杂任务时，上下文和注意力不够用。比如既要写后端 schema，又要写前端组件，两个方向混在一个 messages 里互相干扰。怎么让多个 Agent 并行干活，各自在自己的上下文里独立工作？
+
+### 功能
+
+让 Lead Agent 通过 `spawn_teammate` 工具启动队友 daemon 线程。每个队友用自己的 AgentLoop 和独立 messages，通过文件邮箱（`.mailboxes/*.jsonl`）跟 Lead 通信。
+
+新增：
+
+- `TeamMessage`：数据类，from、to、type、content、timestamp
+- `MessageBus`：文件邮箱，追加到 `.mailboxes/{to}.jsonl`，读取后删除（消费式）
+- `SpawnTeammateTool`：启动队友 daemon 线程，activeTeammates 防止同名重复启动
+- `SendMessageTool`：向指定 Agent 的邮箱写入消息
+- `CheckInboxTool`：消费当前 Agent 的 inbox
+
+### 设计
+
+```text
+Lead: spawn_teammate("alice", "backend developer", "创建 schema.sql")
+  → SpawnTeammateTool 启动 daemon 线程，maxTurns=10
+  → alice 独立 AgentLoop + 独立 messages
+  → alice 工具集：bash/read_file/write_file/send_message（无 spawn_teammate）
+  → alice send_message("lead", "schema.sql 已完成")
+  → MessageBus 追加 .mailboxes/lead.jsonl
+  → Lead 每轮后自动读取 inbox，注入 <inbox>...</inbox> 到 history
+```
+
+关键设计决策：
+
+- **文件邮箱**：每个 Agent 一个 `.mailboxes/{name}.jsonl`，读取后删除整个文件（消费式），保证消息不会被重复处理
+- **队友不可递归创建**：队友工具集不包含 `spawn_teammate`，防止无限派生
+- **harness 自动注入 inbox**：队友不注册 `check_inbox`，每轮 LLM 调用前由 harness 自动读 inbox 并注入 `<inbox>` 标签——队友不需要主动检查邮件
+- **去重**：`activeTeammates`（ConcurrentHashMap keySet）防止同名队友重复启动
+- **不持久化队友状态**：教学版队友运行状态只在进程内，进程退出不恢复
+
+### 实现
+
+`SpawnTeammateTool` — 输入字段为 `prompt`（非 `task`），队友独立运行完整循环：
+
+```java
+public ToolResult execute(JSONObject input) {
+    String name = input.getString("name");
+    String role = input.getString("role");
+    String prompt = input.getString("prompt");  // 输入字段是 prompt
+    if (!activeTeammates.add(name)) {
+        return new ToolResult("Teammate '" + name + "' already exists");
+    }
+    Thread thread = new Thread(() -> runTeammate(name, role, prompt),
+        "mini-claude-code-teammate-" + name);
+    thread.setDaemon(true);
+    thread.start();
+    return new ToolResult("Teammate spawned: " + name);
+}
+
+private void runTeammate(String name, String role, String prompt) {
+    // 队友创建自己的 ToolRegistry + LlmClient（无 spawn_teammate）
+    ToolRegistry registry = new ToolRegistry()
+        .register(new BashTool(workdir))
+        .register(new ReadFileTool(workdir))
+        .register(new WriteFileTool(workdir))
+        .register(new SendMessageTool(bus, name));
+    LlmClient client = new AnthropicLlmClient(config(promptTemplate, name, role));
+    // 队友循环：每轮前 injectTeammateInbox，模型不注册 check_inbox
+    AssistantMessage answer = runTeammateLoop(name, prompt, client, registry);
+    bus.send(name, "lead", extractText(answer), "result");
+    activeTeammates.remove(name);
+}
+```
+
+`MessageBus` — `send()` 用四个字符串参数，`readInbox()` 消费后删除：
+
+```java
+public void send(String from, String to, String content, String type) {
+    TeamMessage msg = new TeamMessage(from, to, type, content);
+    File inbox = new File(mailboxesDir, to + ".jsonl");
+    Files.writeString(inbox.toPath(), JSON.toJSONString(msg) + "\n",
+        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+}
+
+public List<TeamMessage> readInbox(String agentName) {
+    File inbox = new File(mailboxesDir, agentName + ".jsonl");
+    if (!inbox.exists()) return Collections.emptyList();
+    List<String> lines = Files.readAllLines(inbox.toPath());
+    inbox.delete();  // 消费后删除
+    return lines.stream().map(l -> JSON.parseObject(l, TeamMessage.class)).collect(toList());
+}
+```
+
+### 遗留问题
+
+- 队友间只有普通文本消息，Lead 没法区分「这个回复对应哪个请求」→ **s14 Team Protocols** 解决
+- 队友由 Lead 手动分配任务，不会自己找活干 → **s15 Autonomous Agents** 解决
+
+## s14 Team Protocols
+
+**教学分支：** `s14-team-protocols`
+
+### 问题
+
+s13 的队友间只有普通文本消息，Lead 没法判断「这个回复对应哪个请求」。比如 Lead 同时让 alice 关机、让她提交计划，收到两条回复时分不清谁对应谁。怎么给队友间通信加上请求-响应匹配？
+
+### 功能
+
+引入协议消息系统：用 `request_id` 标记每个请求，`ProtocolService` 维护 pending 请求表，响应到达时自动匹配并更新状态。支持 shutdown 和 plan 两种协议。
+
+新增：
+
+- `ProtocolState`：数据类，requestId、type、sender、target、status、payload、timestamp
+- `ProtocolService`：创建请求（自增 request_id）、匹配响应、按消息类型分发
+- `RequestShutdownTool`：Lead 发起关机握手（shutdown_request）
+- `RequestPlanTool`：Lead 要求队友先提交计划
+- `SubmitPlanTool`：队友提交计划到 Lead inbox（plan_approval_request）
+- `ReviewPlanTool`：Lead 根据 request_id 批准或拒绝计划（plan_approval_response）
+- `ProtocolCheckInboxTool`：Lead 读取 inbox 时先路由协议响应，避免状态丢失
+
+### 设计
+
+关机协议（shutdown handshake）：
+
+```text
+Lead request_shutdown("alice", "任务完成，可以关闭")
+  → ProtocolService 创建 ProtocolState(req_001, shutdown, pending)
+  → MessageBus 写入 shutdown_request + metadata.request_id=req_001
+  → alice idle loop 读到 inbox
+  → ProtocolService.handleTeammateProtocolMessage 回复 shutdown_response + request_id=req_001
+  → Lead consumeLeadInbox 匹配 req_001，状态 → approved
+  → alice 退出
+```
+
+计划审批协议（plan approval）：
+
+```text
+Lead request_plan("bob", "重构认证模块")
+  → bob submit_plan("将分三步重构...")
+  → plan_approval_request 写入 Lead inbox（request_id=req_002）
+  → Lead review_plan(req_002, true, "方案批准")
+  → plan_approval_response 写回 bob inbox
+```
+
+关键设计决策：
+
+- **request_id 匹配**：ProtocolService 用自增计数器生成唯一 id，响应中带回同一个 id，Lead 在 `consumeLeadInbox` 中自动匹配并更新 pending 状态
+- **队友 idle loop**：队友完成当前工作后不立即退出，每秒轮询 inbox（`idleUntilMessage`），收到 shutdown 就退出，收到普通消息就继续工作
+- **协议消息优先路由**：`ProtocolCheckInboxTool` 在返回普通消息前先过滤协议消息，交给 `ProtocolService` 处理，防止协议响应被当作普通消息漏掉
+- **强约束未实现**：计划提交后被批准或拒绝，但教学版不做「未批准就禁止执行」的硬门控，靠 prompt 约束
+
+### 实现
+
+`ProtocolService` — 请求创建与响应匹配：
+
+```java
+public class ProtocolService {
+    private final Map<String, ProtocolState> pending = new ConcurrentHashMap<>();
+    private final AtomicInteger requestCounter = new AtomicInteger(1);
+
+    public ProtocolState createRequest(String type, String target, String payload) {
+        String requestId = "req_" + requestCounter.getAndIncrement();
+        ProtocolState state = new ProtocolState(requestId, type, "lead", target, "pending", payload);
+        pending.put(requestId, state);
+        return state;
+    }
+
+    public ProtocolState matchResponse(String requestId, String status, String payload) {
+        ProtocolState state = pending.get(requestId);
+        if (state != null) {
+            state.setStatus(status);
+            state.setPayload(payload);
+        }
+        return state;
+    }
+
+    public void handleTeammateProtocolMessage(TeamMessage msg, Consumer<TeamMessage> replyFn) {
+        // 根据消息类型自动回复
+        if ("shutdown_request".equals(msg.getType())) {
+            replyFn.accept(new TeamMessage(msg.getTo(), msg.getFrom(),
+                "shutdown_response", "acknowledged", msg.getMetadata().get("request_id")));
+        }
+    }
+}
+```
+
+Shutdown 工具 — Lead 发起握手：
+
+```java
+public ToolResult execute(JSONObject input) {
+    String teammate = input.getString("teammate");
+    String reason = input.getString("reason");
+    ProtocolState state = protocolService.createRequest("shutdown", teammate, reason);
+    messageBus.send(new TeamMessage("lead", teammate, "shutdown_request", reason,
+        Map.of("request_id", state.getRequestId())));
+    return new ToolResult("[Shutdown requested] request_id=" + state.getRequestId());
+}
+```
+
+### 遗留问题
+
+- 队友靠轮询 inbox 等待消息，不会主动扫任务板找活 → **s15 Autonomous Agents** 解决
+- 协议只覆盖 shutdown 和 plan 两种场景 → 生产版需要更完整的 Agent Communication Protocol
+
+## s15 Autonomous Agents
+
+**教学分支：** `s15-autonomous-agents`
+
+### 问题
+
+s14 的队友靠轮询 inbox 等待消息——Lead 不发话，队友就闲着。但任务板上可能有 pending 任务没人做。怎么让队友空闲时自己扫看板，有活就认领？
+
+### 功能
+
+队友 idle 时不再只等消息，而是每 5 秒扫一次 `.tasks/` 看板，找到 pending、无 owner、依赖已完成的任务后自动 claim 并开始工作。60 秒没活干就退出。
+
+新增：
+
+- `TaskService.scanUnclaimedTasks()`：扫描 pending、无 owner、依赖全部完成的任务
+- `ClaimTaskTool` 增加 `defaultOwner` 注入：harness 把队友名固定为 owner，防止冒领
+- `SpawnTeammateTool` 增加 autonomous 模式：传入 TaskService 时自动启用，队友工具池增加 list_tasks/claim_task/complete_task
+
+### 设计
+
+Pull 模式——队友自己拉任务，Lead 不逐个分配：
+
+```text
+Lead create_task("创建 schema.sql", blockedBy=[])
+Lead create_task("创建 API", blockedBy=["task_schema"])
+Lead spawn_teammate("alice", "backend", autonomous=true)
+Lead spawn_teammate("bob", "fullstack", autonomous=true)
+
+alice:
+  → WORK 阶段完成初始上下文
+  → IDLE：每 5 秒 poll
+      先检查 inbox（协议消息优先）
+      再 scanUnclaimedTasks() → 找到 "创建 schema.sql" → claimTask(taskId, "alice")
+      → 注入 <auto-claimed>task: 创建 schema.sql</auto-claimed>
+      → 回到 WORK 执行
+      → 完成后 claim 下一个未锁定任务
+  → 60 秒无 inbox 且无任务 → 退出
+
+bob:
+  → 同时运行，但 "创建 API" 依赖 schema → blocked → 不会认领
+  → alice 完成 schema 后 → complete_task 报告 Unblocked: "创建 API"
+  → bob 下轮 scanUnclaimedTasks → 找到 "创建 API" → claim → 执行
+```
+
+关键设计决策：
+
+- **依赖感知**：`scanUnclaimedTasks()` 过滤掉有 blockedBy 未满足的任务，保证队友不会抢到还没准备好的工作
+- **owner 防冒领**：队友的 `claim_task` 工具的 `defaultOwner` 被 harness 强制设为队友名（如 "alice"），工具定义中不暴露 owner 参数给模型
+- **idle 双检查**：先 inbox（协议消息优先，shutdown 立即响应），再任务板。inbox 消息和任务板都空的才算真正的 idle
+- **无文件锁**：教学版只用 owner 检查防冲突（已认领的不能重复 claim），极端并发下两个队友可能同时争同一任务
+
+### 实现
+
+队友 idle loop — 每 5 秒扫一次看板：
+
+```java
+private String idleUntilWork(String teammateName, TaskService taskService, MessageBus bus) {
+    long idleStart = System.currentTimeMillis();
+    while (System.currentTimeMillis() - idleStart < 60_000) {
+        // 先检查 inbox
+        List<TeamMessage> inbox = bus.readInbox(teammateName);
+        for (TeamMessage msg : inbox) {
+            if ("shutdown_request".equals(msg.getType())) {
+                bus.send(new TeamMessage(teammateName, "lead", "shutdown_response",
+                    "ack", msg.getMetadata().get("request_id")));
+                return null;  // 退出
+            }
+            // 普通消息 → 继续工作
+            return msg.getContent();
+        }
+
+        // 扫看板找未认领任务
+        List<TaskRecord> unclaimed = taskService.scanUnclaimedTasks();
+        if (!unclaimed.isEmpty()) {
+            TaskRecord task = unclaimed.get(0);
+            taskService.claimTask(task.getId(), teammateName);
+            return "<auto-claimed>task: " + task.getSubject() + "</auto-claimed>";
+        }
+
+        try { Thread.sleep(5000); } catch (InterruptedException e) { break; }
+    }
+    return null;  // 60 秒无活，退出
+}
+```
+
+### 遗留问题
+
+- 无并发认领保护，极端情况下两个队友可能同时 claim 同一任务 → 生产需要文件锁或数据库事务
+- 工具池固定，外部能力（MCP）没接入 → **s16 MCP Plugin** 解决
+
+## s16 MCP Plugin
+
+**教学分支：** `s16-mcp-plugin`
+
+### 问题
+
+到目前为止，工具池都是启动时写死的（BashTool、ReadFileTool 等）。如果 Agent 运行时需要新能力——比如查天气、操作 GitHub Issue——只能停下来加代码重启。怎么让 Agent 在运行时动态接入外部工具？
+
+### 功能
+
+通过 `connect_mcp` 工具连接外部 MCP Server，发现并注册其工具。工具池每轮动态重组，连接新 Server 后下一轮即可调用其工具。使用 mock server 演示，不依赖真实 MCP 服务。
+
+新增：
+
+- `McpManager`：维护已连接的 MCP Server 映射
+- `McpClient`：接口，getName() / getTools() / callTool()
+- `McpToolDefinition`：name、description、inputSchema、readOnly
+- `McpToolName`：前缀命名 `mcp__{server}__{tool}`，防止冲突
+- `McpTool`：适配器，把 MCP 工具调用转换成项目 `Tool` 接口
+- `McpToolPool`：每轮组装 builtin + connect_mcp + 已连接 MCP 工具
+- `DynamicMcpAgentLoop`：s16 专用循环，每轮 LLM 调用前重新组装工具池
+- `MockMcpServers`：两个 mock server——time（`get_current_time`）和 weather（`get_current_weather`）
+
+### 设计
+
+```text
+Turn 1: model → connect_mcp("weather")
+        → McpManager.connect("weather")
+        → 调用 McpClient.getTools() → 发现 get_current_weather
+        → 注册到 McpManager
+        → tool_result: "Connected to weather. Tools: mcp__weather__get_current_weather (readOnly)"
+
+Turn 2: McpToolPool.assemble()
+        → builtin tools: bash/read_file/write_file
+        → + connect_mcp
+        → + mcp__weather__get_current_weather（新连接的工具自动出现）
+        → ToolRegistry
+
+        model → mcp__weather__get_current_weather({"city":"Shanghai"})
+        → McpTool 适配器 → McpClient.callTool("get_current_weather", {...})
+        → 返回 mock 天气数据
+```
+
+两个 mock MCP Server：
+
+```text
+time
+  └─ mcp__time__get_current_time (readOnly) → 使用 java.time 获取当前时间
+
+weather
+  └─ mcp__weather__get_current_weather (readOnly) → 使用内置 mock 数据返回天气
+```
+
+关键设计决策：
+
+- **前缀防冲突**：所有 MCP 工具统一命名为 `mcp__{server}__{tool}`，不同 Server 不会撞名，模型也能一眼看出工具的来源
+- **动态工具池**：每轮 LLM 调用前重新 assemble，新连接的 Server 工具自动出现在下一轮。循环本身不感知工具池的变化——仍然按工具名 dispatch
+- **适配器模式**：`McpTool` 把 MCP 的 tool 定义和调用适配到项目已有的 `Tool` 接口，循环和 ToolRegistry 完全不关心工具是内置的还是 MCP 来的
+- **readOnly 标注**：MCP 工具定义携带 readOnly 属性，模型和权限系统可以据此判断安全性
+- **mock server**：教学版不依赖真实 MCP 协议（JSON-RPC、stdio/HTTP 传输），用 mock 保持学习重点在动态工具池
+
+### 实现
+
+`McpToolPool.assemble()` — 每轮动态组装：
+
+```java
+public class McpToolPool {
+    private final List<Tool> builtinTools;
+    private final McpManager mcpManager;
+
+    public ToolRegistry assemble() {
+        ToolRegistry registry = new ToolRegistry();
+        // 1. 注册内置工具
+        for (Tool tool : builtinTools) {
+            registry.register(tool);
+        }
+        // 2. 注册 connect_mcp
+        registry.register(new ConnectMcpTool(mcpManager));
+        // 3. 注册所有已连接 MCP Server 的工具
+        for (Map.Entry<String, McpClient> entry : mcpManager.getConnectedServers().entrySet()) {
+            String serverName = entry.getKey();
+            McpClient client = entry.getValue();
+            for (McpToolDefinition def : client.getTools()) {
+                String fullName = McpToolName.of(serverName, def.getName());
+                registry.register(new McpTool(fullName, def, client));
+            }
+        }
+        return registry;
+    }
+}
+```
+
+`DynamicMcpAgentLoop` — 每轮重组工具池：
+
+```java
+for (int turn = 0; turn < maxTurns; turn++) {
+    // s16：每轮重新组装工具池
+    ToolRegistry registry = toolPool.assemble();
+
+    AssistantMessage msg = llmClient.chat(systemPrompt, history, registry.definitions());
+    history.add(msg.toMessage());
+
+    for (ToolUseBlock toolUse : msg.getToolUses()) {
+        Tool tool = registry.find(toolUse.getName());
+        if (tool != null) {
+            ToolResult result = tool.execute(toolUse.getInput());
+            history.add(Message.toolResult(toolUse.getId(), result.getContent()));
+        }
+    }
+}
+```
+
+`MockMcpServers` — time 和 weather 两个 mock：
+
+```java
+public class MockMcpServers {
+    public static McpClient createTimeServer() {
+        return new McpClient() {
+            public List<McpToolDefinition> getTools() {
+                return List.of(new McpToolDefinition(
+                    "get_current_time", "Returns the current time", ..., true));
+            }
+            public String callTool(String name, JSONObject args) {
+                return LocalDateTime.now().toString();
+            }
+        };
+    }
+
+    public static McpClient createWeatherServer() {
+        return new McpClient() {
+            public List<McpToolDefinition> getTools() {
+                return List.of(new McpToolDefinition(
+                    "get_current_weather", "Returns weather for a city", ..., true));
+            }
+            public String callTool(String name, JSONObject args) {
+                String city = args.getString("city");
+                return city + ": 22°C, partly cloudy (mock)";
+            }
+        };
+    }
+}
+```
+
+### 遗留问题
+
+- 使用 mock server，没有真实的 MCP 协议实现（JSON-RPC、stdio/HTTP 传输、tools/list 和 tools/call）→ 生产版需要完整的 MCP 客户端
+- MCP 工具无权限管控，连接后即可调用 → s03 的权限管线可以扩展到 MCP 工具
+
