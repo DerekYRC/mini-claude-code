@@ -6,6 +6,11 @@
 [![Stars](https://img.shields.io/github/stars/DerekYRC/mini-claude-code)](https://img.shields.io/github/stars/DerekYRC/mini-claude-code)
 [![Forks](https://img.shields.io/github/forks/DerekYRC/mini-claude-code)](https://img.shields.io/github/forks/DerekYRC/mini-claude-code)
 
+**姊妹版：**
+- [**mini-spring**](https://github.com/DerekYRC/mini-spring) **(简化版的spring框架)**
+- [**mini-spring-cloud**](https://github.com/DerekYRC/mini-spring-cloud) **(简化版的spring cloud框架)**
+- [**mini-netty**](https://github.com/DerekYRC/mini-netty) **(简化版的netty框架)**
+
 ## 关于
 
 **mini-claude-code** 是一个简化版的Java版 Claude Code 编程 Agent 项目，能帮助你快速理解编码 Agent 的核心原理。项目抽取了 Agent Harness 的关键机制，**代码尽量精简，保留核心功能**，如 Agent Loop、工具调用、权限控制、Hooks、Todo、Subagent、Skill Loading、上下文压缩、记忆系统、任务系统、后台任务、定时调度、多 Agent 协作、团队协议、自主认领任务和 MCP Plugin 等功能。
