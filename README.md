@@ -60,7 +60,7 @@ export ANTHROPIC_API_KEY='你的 API Key'
 git switch s01-agent-loop
 ```
 
-### 3. 启动 demo
+### 3. 启动 Demo
 
 使用 Maven 启动指定 demo：
 
@@ -70,7 +70,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDe
 
 ### 4. 阅读源码说明
 
-阅读 [changelog.md](changelog.md)。
+阅读 [changelog.md](changelog.md)
 
 
 ## 提问
