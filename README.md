@@ -3,8 +3,7 @@
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/DerekYRC/mini-claude-code)
 [![Java](https://img.shields.io/badge/Java-17-4EB1BA.svg)](https://www.oracle.com/java/)
 [![Maven](https://img.shields.io/badge/build-Maven-C71A36.svg)](https://maven.apache.org/)
-[![Stars](https://img.shields.io/github/stars/DerekYRC/mini-claude-code)](https://img.shields.io/github/stars/DerekYRC/mini-claude-code)
-[![Forks](https://img.shields.io/github/forks/DerekYRC/mini-claude-code)](https://img.shields.io/github/forks/DerekYRC/mini-claude-code)
+
 
 **姊妹版：**
 - [**mini-spring**](https://github.com/DerekYRC/mini-spring) **(简化版的spring框架)**
