@@ -52,8 +52,6 @@ export MODEL_ID='你的模型 ID'
 export ANTHROPIC_API_KEY='你的 API Key'
 ```
 
-不要把 API Key 写入仓库文件。
-
 ### 2. 切换章节分支
 
 每章对应一个教学分支。比如学习 s01：
@@ -74,13 +72,6 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDe
 
 阅读 [changelog.md](changelog.md)。
 
-`changelog.md` 会按章节说明：
-
-* 本章新增了哪些源码
-* 为什么这样设计
-* 和前一章相比变了什么
-* 如何启动真实 API demo
-* 可以尝试哪些 smoke test prompt
 
 ## 提问
 
