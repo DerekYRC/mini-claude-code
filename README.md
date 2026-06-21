@@ -21,22 +21,22 @@
 
 ## 功能
 
-* [s01 Agent Loop](changelog.md#s01one-loop--bash-is-all-you-need) — ReAct：思考-行动-观察，LLM ⇄ Tool 闭环
-* [s02 Tool Dispatch](changelog.md#s02加一个工具只加一个-handler) — Tool Use：注册即用，不改主循环
-* [s03 Permission](changelog.md#s03先划边界再给自由) — Guardrails：三层校验，先审后执行
-* [s04 Hooks](changelog.md#s04挂在循环上不写进循环里) — Lifecycle：四个事件点，横切逻辑不侵入循环
-* [s05 Todo](changelog.md#s05没有计划的-agent-走哪算哪) — Planning：先规划再执行，状态可追踪
-* [s06 Subagent](changelog.md#s06大任务拆小每个小任务干净的上下文) — Delegation：委托子代理，上下文干净隔离
-* [s07 Skill Loading](changelog.md#s07用到时再加载别全塞-prompt-里) — Lazy Skill Loading：索引在 Prompt，正文按需加载
-* [s08 Context Compact](changelog.md#s08上下文总会满要有办法腾地方) — Context Compression：四层压缩管线，满了就腾空间
-* [s09 Memory](changelog.md#s09记住该记的忘掉该忘的) — Long-term Memory：记什么、忘什么、何时合并
-* [s10 Task System](changelog.md#s10task-system) — Task Orchestration：任务图 + 状态机 + 依赖检查
-* [s11 Background Tasks](changelog.md#s11background-tasks) — Async：慢操作丢后台，Agent 继续思考
-* [s12 Cron Scheduler](changelog.md#s12cron-scheduler) — Scheduled Trigger：cron 表达式，无人值守触发
-* [s13 Agent Teams](changelog.md#s13agent-teams) — Multi-Agent：Lead 派活，队友并行干活
-* [s14 Team Protocols](changelog.md#s14队友之间要有约定) — Structured Communication：request_id + 状态机，队友间结构化通信
-* [s15 Autonomous Agents](changelog.md#s15队友自己看板有活就认领) — Self-Organization：队友扫看板，有活自己认领
-* [s16 MCP Plugin](changelog.md#s16能力不够插上-mcp) — MCP：动态工具池，能力不够插上就用
+* [s01 Agent Loop](changelog.md#s01-agent-loop) — ReAct：思考-行动-观察，LLM ⇄ Tool 闭环
+* [s02 Tool Dispatch](changelog.md#s02-tool-dispatch) — Tool Use：注册即用，不改主循环
+* [s03 Permission](changelog.md#s03-permission) — Guardrails：三层校验，先审后执行
+* [s04 Hooks](changelog.md#s04-hooks) — Lifecycle：四个事件点，横切逻辑不侵入循环
+* [s05 Todo](changelog.md#s05-todo) — Planning：先规划再执行，状态可追踪
+* [s06 Subagent](changelog.md#s06-subagent) — Delegation：委托子代理，上下文干净隔离
+* [s07 Skill Loading](changelog.md#s07-skill-loading) — Lazy Skill Loading：索引在 Prompt，正文按需加载
+* [s08 Context Compact](changelog.md#s08-context-compact) — Context Compression：四层压缩管线，满了就腾空间
+* [s09 Memory](changelog.md#s09-memory) — Long-term Memory：记什么、忘什么、何时合并
+* [s10 Task System](changelog.md#s10-task-system) — Task Orchestration：任务图 + 状态机 + 依赖检查
+* [s11 Background Tasks](changelog.md#s11-background-tasks) — Async：慢操作丢后台，Agent 继续思考
+* [s12 Cron Scheduler](changelog.md#s12-cron-scheduler) — Scheduled Trigger：cron 表达式，无人值守触发
+* [s13 Agent Teams](changelog.md#s13-agent-teams) — Multi-Agent：Lead 派活，队友并行干活
+* [s14 Team Protocols](changelog.md#s14-team-protocols) — Structured Communication：request_id + 状态机，队友间结构化通信
+* [s15 Autonomous Agents](changelog.md#s15-autonomous-agents) — Self-Organization：队友扫看板，有活自己认领
+* [s16 MCP Plugin](changelog.md#s16-mcp-plugin) — MCP：动态工具池，能力不够插上就用
 
 ## 使用方法
 
