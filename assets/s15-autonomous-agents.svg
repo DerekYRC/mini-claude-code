@@ -1,109 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="960" height="620">
   <defs>
-    <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    <marker id="arrow_2563eb" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
     </marker>
-    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+    <marker id="arrow_16a34a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#16a34a"/>
     </marker>
-    <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    <marker id="arrow_8b5cf6" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#8b5cf6"/>
     </marker>
-    <marker id="arrowE" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+    <marker id="arrow_f97316" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#f97316"/>
     </marker>
-    <marker id="arrowF" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    <marker id="arrow_dc2626" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#dc2626"/>
     </marker>
-    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+    <marker id="arrow_6b7280" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#6b7280"/>
     </marker>
-    <marker id="arrowH" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
-    </marker>
-    <filter id="shadowSoft" x="-20%" y="-20%" width="140%" height="160%">
-      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.12"/>
-    </filter>
-    <filter id="shadowGlass" x="-20%" y="-20%" width="140%" height="160%">
-      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#020617" flood-opacity="0.28"/>
-    </filter>
-    <style>
-    text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', sans-serif; }
-    .title { font-size: 30px; font-weight: 700; fill: #111827; }
-    .subtitle { font-size: 14px; font-weight: 500; fill: #6b7280; }
-    .section { font-size: 13px; font-weight: 700; fill: #2563eb; letter-spacing: 1.4px; }
-    .section-sub { font-size: 12px; font-weight: 500; fill: #94a3b8; }
-    .node-title { font-size: 18px; font-weight: 700; fill: #111827; }
-    .node-sub { font-size: 12px; font-weight: 500; fill: #6b7280; }
-    .node-type { font-size: 12px; font-weight: 700; fill: #9ca3af; letter-spacing: 0.08em; }
-    .arrow-label { font-size: 12px; font-weight: 600; fill: #6b7280; }
-    .legend { font-size: 12px; font-weight: 500; fill: #6b7280; }
-    .footnote { font-size: 12px; font-weight: 500; fill: #94a3b8; }
-    </style>
   </defs>
-  <rect width="960.0" height="640.0" fill="#ffffff"/>
-  <text x="480.0" y="56" text-anchor="middle" class="title">s15 Autonomous Agents — Self-Organization</text>
-  <path d="M 670.0,52.0 L 525.0,52.0 L 525.0,134.0 L 380.0,134.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
-  <path d="M 580.0,134.0 L 485.0,134.0 L 485.0,212.0 L 390.0,212.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
-  <path d="M 570.0,212.0 L 355.0,212.0 L 355.0,302.0 L 140.0,302.0" fill="none" stroke="#f97316" stroke-width="2.4" marker-end="url(#arrowE)"/>
-  <path d="M 320.0,302.0 L 540.0,302.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
-  <path d="M 320.0,302.0 L 340.4,302.0 L 359.6,134.0 L 380.0,134.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
-  <path d="M 840.0,302.0 L 690.0,302.0 L 690.0,412.0 L 540.0,412.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
-  <path d="M 840.0,302.0 L 615.0,302.0 L 615.0,212.0 L 390.0,212.0" fill="none" stroke="#f97316" stroke-width="2.4" marker-end="url(#arrowE)"/>
-  <path d="M 840.0,412.0 L 366.0,412.0 L 366.0,134.0 L 380.0,134.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
-  <path d="M 570.0,212.0 L 475.0,212.0 L 475.0,526.0 L 380.0,526.0" fill="none" stroke="#ef4444" stroke-width="2.4" marker-end="url(#arrowG)"/>
-  <path d="M 320.0,302.0 L 340.4,302.0 L 359.6,526.0 L 380.0,526.0" fill="none" stroke="#ef4444" stroke-width="2.4" marker-end="url(#arrowG)"/>
-  <rect x="290.0" y="24.0" width="380.0" height="56.0" rx="10.0" fill="#eff6ff" stroke="#2563eb" stroke-width="2.0" filter="url(#shadowSoft)"/>
-  <text x="480.0" y="42.0" text-anchor="middle" class="node-type">LEAD</text>
-  <text x="480.0" y="58.0" text-anchor="middle" class="node-title">Lead: create_task × 3
-spawn_teammate(alice, bob)
-(autonomous=true)</text>
-  <rect x="380.0" y="112.0" width="200.0" height="44.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.0" filter="url(#shadowSoft)"/>
-  <text x="480.0" y="134.0" text-anchor="middle" class="node-title">WORK phase
-完成当前任务</text>
-  <rect x="390.0" y="190.0" width="180.0" height="44.0" rx="10.0" fill="#fff7ed" stroke="#f97316" stroke-width="2.0" filter="url(#shadowSoft)"/>
-  <text x="480.0" y="212.0" text-anchor="middle" class="node-title">IDLE: every 5s</text>
-  <rect x="140.0" y="280.0" width="180.0" height="44.0" rx="10.0" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2.0" filter="url(#shadowSoft)"/>
-  <text x="230.0" y="302.0" text-anchor="middle" class="node-title">① read inbox
-yes → WORK</text>
-  <rect x="540.0" y="270.0" width="300.0" height="64.0" rx="10.0" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.8" filter="url(#shadowSoft)"/>
-  <text x="690.0" y="302.0" text-anchor="middle" class="node-title">② scanUnclaimedTasks()
-pending + no owner
-+ blockedBy all done</text>
-  <rect x="540.0" y="380.0" width="300.0" height="64.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8" filter="url(#shadowSoft)"/>
-  <text x="690.0" y="412.0" text-anchor="middle" class="node-title">③ claimTask(id, name)
-owner = harness fixed
-inject &lt;auto-claimed&gt;</text>
-  <rect x="380.0" y="500.0" width="200.0" height="52.0" rx="10.0" fill="#fef2f2" stroke="#dc2626" stroke-width="2.0" filter="url(#shadowSoft)"/>
-  <text x="480.0" y="526.0" text-anchor="middle" class="node-title">EXIT
-60s timeout
-or shutdown</text>
-  <rect x="573.0" y="38.0" width="49" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="597.5" y="52.0" text-anchor="middle" class="arrow-label">start</text>
-  <rect x="428.5" y="159.0" width="77" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="467.0" y="173.0" text-anchor="middle" class="arrow-label">task done</text>
-  <rect x="398.5" y="272.0" width="63" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="430.0" y="286.0" text-anchor="middle" class="arrow-label">no msgs</text>
-  <rect x="301.0" y="204.0" width="98" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="350.0" y="218.0" text-anchor="middle" class="arrow-label">msg received</text>
-  <rect x="630.0" y="343.0" width="84" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="672.0" y="357.0" text-anchor="middle" class="arrow-label">found task</text>
-  <rect x="657.5" y="288.0" width="140" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="727.5" y="302.0" text-anchor="middle" class="arrow-label">no task → sleep 5s</text>
-  <rect x="338.0" y="259.0" width="56" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="366.0" y="273.0" text-anchor="middle" class="arrow-label">→ WORK</text>
-  <rect x="422.0" y="355.0" width="70" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="457.0" y="369.0" text-anchor="middle" class="arrow-label">60s idle</text>
-  <rect x="287.0" y="384.0" width="126" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="350.0" y="398.0" text-anchor="middle" class="arrow-label">shutdown_request</text>
-  <line x1="42.0" y1="590.0" x2="72.0" y2="590.0" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
-  <text x="82.0" y="594.0" class="legend">lead</text>
-  <line x1="42.0" y1="612.0" x2="72.0" y2="612.0" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
-  <text x="82.0" y="616.0" class="legend">work</text>
-  <line x1="42.0" y1="634.0" x2="72.0" y2="634.0" stroke="#f97316" stroke-width="2.4" marker-end="url(#arrowE)"/>
-  <text x="82.0" y="638.0" class="legend">idle poll</text>
-  <line x1="42.0" y1="656.0" x2="72.0" y2="656.0" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
-  <text x="82.0" y="660.0" class="legend">check</text>
-  <line x1="42.0" y1="678.0" x2="72.0" y2="678.0" stroke="#ef4444" stroke-width="2.4" marker-end="url(#arrowG)"/>
-  <text x="82.0" y="682.0" class="legend">exit</text>
+  <rect width="960" height="620" fill="#ffffff"/>
+  <text x="480" y="36" text-anchor="middle" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="18" fill="#111827" font-weight="600">s15 Autonomous Agents — Self-Organization</text>
+
+<rect x="280" y="45" width="400" height="44" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="480" y="67" text-anchor="middle" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="13" fill="#111827" font-weight="600">Lead: create_task ×3, spawn_teammate(alice,bob)</text><rect x="370" y="120" width="220" height="44" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="480" y="142" text-anchor="middle" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="13" fill="#111827" font-weight="600">WORK Phase — execute task</text><path d="M 480,164 L 480,195" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrow_16a34a)"/>
+  <text x="486" y="173" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#16a34a">task done</text><rect x="370" y="195" width="220" height="44" rx="6" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+  <text x="480" y="217" text-anchor="middle" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="13" fill="#111827" font-weight="600">IDLE — every 5s poll</text><path d="M 370,217 L 275,217 L 275,270 L 180,270" fill="none" stroke="#f97316" stroke-width="1.5" marker-end="url(#arrow_f97316)"/>
+  <text x="281" y="237" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#f97316">check</text><rect x="60" y="270" width="240" height="48" rx="6" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="180" y="294" text-anchor="middle" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="13" fill="#111827" font-weight="600">Inbox? → WORK / shutdown → EXIT</text><path d="M 590,217 L 675,217 L 675,270 L 760,270" fill="none" stroke="#f97316" stroke-width="1.5" marker-end="url(#arrow_f97316)"/>
+  <text x="681" y="237" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#f97316">check</text><rect x="640" y="270" width="280" height="48" rx="6" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="780" y="294" text-anchor="middle" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="13" fill="#111827" font-weight="600">scanUnclaimedTasks() → claim?</text><path d="M 780,318 L 780,370" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrow_16a34a)"/>
+  <text x="786" y="338" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#16a34a">found</text><rect x="660" y="370" width="240" height="44" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="780" y="392" text-anchor="middle" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="13" fill="#111827" font-weight="600">claimTask(id,name) → WORK</text><path d="M 180,318 L 180,430" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arrow_dc2626)"/>
+  <text x="186" y="368" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#dc2626">60s / shutdown</text><rect x="60" y="430" width="240" height="44" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="180" y="452" text-anchor="middle" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="13" fill="#111827" font-weight="600">EXIT</text><line x1="30" y1="560" x2="58" y2="560" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow_2563eb)"/>
+<text x="66" y="564" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#6b7280">lead</text>
+<line x1="30" y1="582" x2="58" y2="582" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow_16a34a)"/>
+<text x="66" y="586" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#6b7280">work</text>
+<line x1="30" y1="604" x2="58" y2="604" stroke="#f97316" stroke-width="2" marker-end="url(#arrow_f97316)"/>
+<text x="66" y="608" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#6b7280">idle poll</text>
+<line x1="30" y1="626" x2="58" y2="626" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow_8b5cf6)"/>
+<text x="66" y="630" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#6b7280">check</text>
+<line x1="30" y1="648" x2="58" y2="648" stroke="#dc2626" stroke-width="2" marker-end="url(#arrow_dc2626)"/>
+<text x="66" y="652" font-family='Helvetica Neue,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif' font-size="11" fill="#6b7280">exit</text>
+
+  
 </svg>
