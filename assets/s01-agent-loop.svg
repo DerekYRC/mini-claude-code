@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
   <defs>
     <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
       <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
@@ -41,48 +41,37 @@
     .footnote { font-size: 12px; font-weight: 500; fill: #94a3b8; }
     </style>
   </defs>
-  <rect width="960.0" height="600.0" fill="#ffffff"/>
-  <text x="480.0" y="56" text-anchor="middle" class="title">s01 Agent Loop — ReAct</text>
-  <path d="M 560.0,52.0 L 465.0,52.0 L 465.0,130.0 L 370.0,130.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
-  <path d="M 590.0,130.0 L 472.5,130.0 L 472.5,228.0 L 355.0,228.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
-  <path d="M 605.0,228.0 L 480.0,228.0 L 480.0,300.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
-  <path d="M 370.0,328.0 L 480.0,328.0 L 480.0,256.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)" stroke-dasharray="6,4"/>
-  <path d="M 605.0,228.0 L 594.0,228.0 L 594.0,130.0 L 590.0,130.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
-  <path d="M 590.0,130.0 L 629.0,130.0 L 629.0,422.0 L 390.0,422.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
-  <rect x="400.0" y="30.0" width="160.0" height="44.0" rx="10.0" fill="#eff6ff" stroke="#2563eb" stroke-width="2.0" filter="url(#shadowSoft)"/>
-  <circle cx="426.0" cy="52.0" r="18" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
-  <circle cx="426.0" cy="46.0" r="5" fill="#2563eb"/>
-  <path d="M 416.0 63.0 Q 426.0 54.0 436.0 63.0" fill="none" stroke="#2563eb" stroke-width="2"/>
-  <text x="464.0" y="58.0" text-anchor="start" class="node-title">User Input</text>
-  <rect x="370.0" y="100.0" width="220.0" height="60.0" rx="10.0" fill="#eff6ff" stroke="#2563eb" stroke-width="2.0" filter="url(#shadowSoft)"/>
-  <text x="480.0" y="118.0" text-anchor="middle" class="node-type">CORE</text>
-  <text x="480.0" y="136.0" text-anchor="middle" class="node-title">AgentLoop
-(maxTurns: 20)</text>
-  <rect x="355.0" y="200.0" width="250.0" height="56.0" rx="10.0" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2.0" filter="url(#shadowSoft)"/>
-  <rect x="361.0" y="206.0" width="238.0" height="44.0" rx="7.0" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity="0.65"/>
-  <text x="480.0" y="218.0" text-anchor="middle" class="node-type">MODEL</text>
-  <text x="480.0" y="234.0" text-anchor="middle" class="node-title">LLM Client
-(Anthropic API)</text>
-  <rect x="370.0" y="300.0" width="220.0" height="56.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8" filter="url(#shadowSoft)"/>
-  <text x="480.0" y="318.0" text-anchor="middle" class="node-type">TOOL</text>
-  <text x="480.0" y="334.0" text-anchor="middle" class="node-title">BashTool
-/bin/sh -c &lt;command&gt;</text>
-  <rect x="390.0" y="400.0" width="180.0" height="44.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.0" filter="url(#shadowSoft)"/>
-  <text x="480.0" y="422.0" text-anchor="middle" class="node-title">Final Response</text>
-  <rect x="484.5" y="38.0" width="56" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="512.5" y="52.0" text-anchor="middle" class="arrow-label">prompt</text>
-  <rect x="374.0" y="165.0" width="161" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="454.5" y="179.0" text-anchor="middle" class="arrow-label">① chat(history,tools)</text>
-  <rect x="500.5" y="214.0" width="84" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="542.5" y="228.0" text-anchor="middle" class="arrow-label">② tool_use</text>
-  <rect x="372.5" y="314.0" width="105" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="425.0" y="328.0" text-anchor="middle" class="arrow-label">③ tool_result</text>
-  <rect x="540.0" y="165.0" width="168" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="624.0" y="179.0" text-anchor="middle" class="arrow-label">④ next turn / end_turn</text>
-  <rect x="527.0" y="262.0" width="168" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
-  <text x="611.0" y="276.0" text-anchor="middle" class="arrow-label">stop_reason="end_turn"</text>
-  <line x1="42.0" y1="540.0" x2="72.0" y2="540.0" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
-  <text x="82.0" y="544.0" class="legend">Control flow</text>
-  <line x1="42.0" y1="562.0" x2="72.0" y2="562.0" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
-  <text x="82.0" y="566.0" class="legend">Tool result</text>
+  <rect width="1200.0" height="700.0" fill="#ffffff"/>
+  <text x="600.0" y="56" text-anchor="middle" class="title">s01 Agent Loop - ReAct</text>
+  <path d="M 120.0,310.0 L 390.0,140.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <path d="M 390.0,140.0 L 390.0,210.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <path d="M 390.0,270.0 L 390.0,360.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <path d="M 500.0,390.0 L 524.0,390.0 L 524.0,110.0 L 500.0,110.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
+  <path d="M 390.0,140.0 L 390.0,160.4 L 256.0,160.4 L 256.0,479.6 L 390.0,479.6 L 390.0,500.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <rect x="50.0" y="310.0" width="140.0" height="44.0" rx="10.0" fill="#eff6ff" stroke="#2563eb" stroke-width="1.8" filter="url(#shadowSoft)"/>
+  <text x="120.0" y="332.0" text-anchor="middle" class="node-title">User Input</text>
+  <rect x="280.0" y="80.0" width="220.0" height="60.0" rx="10.0" fill="#eff6ff" stroke="#2563eb" stroke-width="2.0" filter="url(#shadowSoft)"/>
+  <text x="390.0" y="110.0" text-anchor="middle" class="node-title">AgentLoop (maxTurns:20)</text>
+  <rect x="280.0" y="210.0" width="220.0" height="60.0" rx="10.0" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2.0" filter="url(#shadowSoft)"/>
+  <rect x="286.0" y="216.0" width="208.0" height="48.0" rx="7.0" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity="0.65"/>
+  <text x="390.0" y="240.0" text-anchor="middle" class="node-title">LLM Client</text>
+  <text x="390.0" y="262.0" text-anchor="middle" class="node-sub">Anthropic API</text>
+  <rect x="280.0" y="360.0" width="220.0" height="60.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8" filter="url(#shadowSoft)"/>
+  <text x="390.0" y="390.0" text-anchor="middle" class="node-title">BashTool (/bin/sh -c)</text>
+  <rect x="280.0" y="500.0" width="220.0" height="44.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.0" filter="url(#shadowSoft)"/>
+  <text x="390.0" y="522.0" text-anchor="middle" class="node-title">Final Response</text>
+  <rect x="227.0" y="211.0" width="56" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="255.0" y="225.0" text-anchor="middle" class="arrow-label">prompt</text>
+  <rect x="288.0" y="161.0" width="168" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="372.0" y="175.0" text-anchor="middle" class="arrow-label">1. chat(history,tools)</text>
+  <rect x="326.5" y="301.0" width="91" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="372.0" y="315.0" text-anchor="middle" class="arrow-label">2. tool_use</text>
+  <rect x="429.5" y="236.0" width="189" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="524.0" y="250.0" text-anchor="middle" class="arrow-label">3. tool_result -&gt; history</text>
+  <rect x="228.5" y="306.0" width="91" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="274.0" y="320.0" text-anchor="middle" class="arrow-label">4. end_turn</text>
+  <line x1="42.0" y1="640.0" x2="72.0" y2="640.0" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <text x="82.0" y="644.0" class="legend">LLM -&gt; tool -&gt; LLM</text>
+  <line x1="42.0" y1="662.0" x2="72.0" y2="662.0" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
+  <text x="82.0" y="666.0" class="legend">tool_result feedback</text>
 </svg>
