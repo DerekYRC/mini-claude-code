@@ -47,7 +47,14 @@ LLM → tool_use → execute → tool_result → LLM → ... → 文本回复
 
 ```java
 public Assi
-![s01 Agent Loop](assets/s01-agent-loop.png)
+```mermaid
+flowchart TD
+    A[User Input] -->|"prompt"| B[AgentLoop.run]
+    B -->|"chat(history,tools)"| C[LLM Client]
+    C -->|"tool_use"| D[BashTool]
+    D -->|"tool_result"| B
+    B -->|"end_turn"| E[Final Response]
+```
 
 stantMessage run(List<Message> messages) {
     for (int turn = 0; turn < 20; turn++) {
@@ -167,7 +174,16 @@ ToolRegistry
 ```java
 public class ToolRegistry {
     private 
-![s02 Tool Dispatch](assets/s02-tool-dispatch.png)
+```mermaid
+flowchart TD
+    A[AgentLoop] -->|"registry.find"| B[ToolRegistry]
+    B --> C[BashTool]
+    B --> D[ReadFileTool]
+    B --> E[WriteFileTool]
+    B --> F[EditFileTool]
+    B --> G[GlobTool]
+    D & E & F -->|"resolve"| H[PathGuard]
+```
 
 final Map<String, Tool> tools = new LinkedHashMap<>();
 
@@ -293,7 +309,20 @@ LLM → tool_use → PermissionManager.check() → 通过 → execute → tool_r
 
 ```java
 public PermissionDecision check(ToolU
-![s03 Permission](assets/s03-permission.png)
+```mermaid
+flowchart TD
+    A[tool_use] --> B[PermissionManager.check]
+    B -->|"bash"| C{denyList?}
+    C -->|"yes"| D[DENY]
+    C -->|"no"| E{askPatterns?}
+    E -->|"yes"| F[User y/N?]
+    F -->|"N"| D
+    F -->|"y"| G[ALLOW]
+    B -->|"write/edit"| H{path 越界?}
+    H -->|"yes"| D
+    H -->|"no"| G
+    B -->|"other"| G
+```
 
 seBlock toolUse) {
     if ("bash".equals(toolUse.getName())) {
@@ -390,7 +419,18 @@ s03 的权限规则写在 `PermissionManager` 里，日志、统计、输出检�
 ### 实现
 
 `HookManager` — 按 String key 存储，`trigger()` 返回第一个 block 或最终 pass：
-![s04 Hooks](assets/s04-hooks.png)
+```mermaid
+flowchart LR
+    HM[HookManager] -->|"register"| E1[UserPromptSubmit]
+    HM -->|"register"| E2[PreToolUse]
+    HM -->|"register"| E3[PostToolUse]
+    HM -->|"register"| E4[Stop]
+    E1 --> E2
+    E2 -->|"pass"| AL[tool.execute]
+    E2 -->|"block"| HM
+    AL --> E3
+    E3 --> E4
+```
 
 
 ```java
@@ -520,7 +560,15 @@ Agent 可以自由调用工具，但面对多步骤任务时没有计划能力�
 
 ```java
 public ToolRes
-![s05 Todo](assets/s05-todo.png)
+```mermaid
+flowchart TD
+    A[Multi-step Task] --> B[todo_write]
+    B --> C[pending: step1]
+    B --> D[pending: step2]
+    B --> E[pending: step3]
+    C & D & E --> F[Execute -> in_progress]
+    F --> G[completed]
+```
 
 ult execute(JSONObject input) {
     JSONArray todos = todosArray(input);
@@ -604,7 +652,14 @@ Parent messages[] → task(description)
 
 ```java
 public clas
-![s06 Subagent](assets/s06-subagent.png)
+```mermaid
+flowchart LR
+    P[Parent Agent] -->|"task"| T[TaskTool]
+    T -->|"new AgentLoop"| S[Subagent]
+    S -->|"execute"| TL[bash/read/write]
+    S -->|"summary"| R[Final Summary]
+    R -->|"tool_result"| P
+```
 
 s TaskTool implements Tool {
     private final LlmClient subagentClient;
@@ -691,7 +746,15 @@ system prompt: "可用技能：code-review（代码审查）、java-cli（Java C
 
 ```java
 public class SkillRegistry
-![s07 Skill Loading](assets/s07-skill-loading.png)
+```mermaid
+flowchart TD
+    A[SkillRegistry scan] -->|"directory"| B[system prompt]
+    A -->|"store"| C[bodies in memory]
+    B -->|"pick"| D[load_skill]
+    D -->|"find"| C
+    C -->|"return"| D
+    D -->|"inject"| E[skill in context]
+```
 
  {
     private final Map<String, Skill> skills = new LinkedHashMap<>();
@@ -818,7 +881,15 @@ description: 代码审查技能
 ```java
 public class CompactionPipeline {
     private static fin
-![s08 Context Compact](assets/s08-context-compact.png)
+```mermaid
+flowchart TD
+    A[beforeLlm] --> B[L1: toolResultBudget]
+    B --> C[L2: snipCompact]
+    C --> D[L3: microCompact]
+    D --> E[L4: compactHistory]
+    E --> F[prompt_is_too_long?]
+    F --> G[reactiveCompact -> retry]
+```
 
 al int MAX_MESSAGES = 50;
     private static final int KEEP_RECENT_TOOL_RESULTS = 3;
@@ -946,7 +1017,14 @@ User prefers using tabs, not spaces, for indentation.
 
 ```java
 
-![s09 Memory](assets/s09-memory.png)
+```mermaid
+flowchart TD
+    A[MEMORY.md Index] --> B[1. Selector]
+    B -->|"inject"| C[Conversation]
+    C -->|"snapshot"| D[2. Extractor]
+    D -->|"write"| E[3. Consolidator]
+    E -->|"update"| A
+```
 
 public class MemoryAgentLoop {
     private final CompactingAgentLoop compactingLoop;
@@ -1053,7 +1131,12 @@ pending → in_progress → completed
 ```java
 public class TaskService {
     private
-![s10 Task System](assets/s10-task-system.png)
+```mermaid
+stateDiagram-v2
+    [*] --> pending: create_task
+    pending --> in_progress: claim_task
+    in_progress --> completed: complete_task
+```
 
  final TaskStore store;
 
@@ -1171,7 +1254,14 @@ Turn 2: LLM → read_file "package.json"（同步，毫秒级）
 
 ```java
 private List<ToolResultBlock> executeToolUses(Assi
-![s11 Background Tasks](assets/s11-background-tasks.png)
+```mermaid
+flowchart TD
+    A[Tool Call] --> B[BackgroundDecider]
+    B -->|"fast"| C[Sync Path]
+    B -->|"slow"| D[Background Path]
+    C & D --> E[Next Turn: notifications]
+    E --> F[LLM sees results]
+```
 
 stantMessage response) {
     List<ToolResultBlock> results = new ArrayList<>();
@@ -1257,7 +1347,15 @@ schedule_cron("0 9 * * *", "检查构建状态")
 
 ```java
 public class CronSched
-![s12 Cron Scheduler](assets/s12-cron-scheduler.png)
+```mermaid
+flowchart TD
+    A[schedule_cron] --> B[Hutool CronUtil]
+    B -->|"match"| C[CronTask.execute]
+    C --> D[agentLock: inject]
+    D --> E[AgentLoop.run]
+    A -->|"durable"| F[CronStore]
+    F -->|"reload"| B
+```
 
 uler {
     private final CronStore store;
@@ -1364,7 +1462,15 @@ Lead: spawn_teammate("alice", "backend developer", "创建 schema.sql")
 
 ```java
 public ToolResult exe
-![s13 Agent Teams](assets/s13-agent-teams.png)
+```mermaid
+flowchart TD
+    L[Lead Agent] -->|"spawn"| S[SpawnTeammateTool]
+    S --> A[Alice]
+    S --> B[Bob]
+    S --> C[Charlie]
+    A & B & C -->|"send"| MB[MessageBus]
+    MB -->|"read"| L
+```
 
 cute(JSONObject input) {
     String name = input.getString("name");
@@ -1480,7 +1586,19 @@ Lead request_plan("bob", "重构认证模块")
 ```java
 public class ProtocolService {
     private final Map<String, 
-![s14 Team Protocols](assets/s14-team-protocols.png)
+```mermaid
+sequenceDiagram
+    participant L as Lead
+    participant P as ProtocolService
+    participant A as Alice
+    L->>P: request_shutdown
+    P->>A: shutdown_request
+    A->>P: shutdown_response
+    P->>L: match->approved
+    L->>P: request_plan
+    A->>P: plan_approval_request
+    P->>L: review_plan
+```
 
 ProtocolState> pending = new ConcurrentHashMap<>();
     private final AtomicInteger requestCounter = new AtomicInteger(1);
@@ -1587,7 +1705,18 @@ bob:
 
 ```java
 private String idleUntilWork(String teammateName, TaskService taskService, Me
-![s15 Autonomous Agents](assets/s15-autonomous-agents.png)
+```mermaid
+flowchart TD
+    WORK[WORK Phase] -->|"done"| IDLE[IDLE: every 5s]
+    IDLE --> INBOX{Inbox?}
+    INBOX -->|"msg"| WORK
+    INBOX -->|"no"| SCAN{scanUnclaimed?}
+    SCAN -->|"found"| CLAIM[claimTask]
+    SCAN -->|"none"| IDLE
+    CLAIM --> WORK
+    IDLE -->|"60s"| EXIT[EXIT]
+    INBOX -->|"shutdown"| EXIT
+```
 
 ssageBus bus) {
     long idleStart = System.currentTimeMillis();
@@ -1692,7 +1821,15 @@ weather
 ```java
 public class McpToolPool {
     private fi
-![s16 MCP Plugin](assets/s16-mcp-plugin.png)
+```mermaid
+flowchart TD
+    P[McpToolPool.assemble] --> BT[builtin tools]
+    P --> CM[connect_mcp]
+    P --> MT[connected MCP tools]
+    CM -->|"discover"| MT
+    BT & CM & MT --> DL[DynamicMcpAgentLoop]
+    MS[Mock Servers] -->|"tools/list"| MT
+```
 
 nal List<Tool> builtinTools;
     private final McpManager mcpManager;
