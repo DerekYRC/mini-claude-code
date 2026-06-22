@@ -71,7 +71,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDe
 
 ### 4. 阅读源码说明
 
-阅读 [changelog.md](changelog.md) 或 [changelog_en.md](changelog_en.md)
+阅读 [changelog.md](changelog.md)
 
 
 ## 提问

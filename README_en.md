@@ -23,22 +23,22 @@ If this project helps you, please give it a **STAR, thank you!**
 
 ## Features
 
-* [s01 Agent Loop](changelog.md#s01-agent-loop) — ReAct: Think-Act-Observe, LLM ⇄ Tool loop
-* [s02 Tool Dispatch](changelog.md#s02-tool-dispatch) — Tool Use: register-and-use, no loop changes needed
-* [s03 Permission](changelog.md#s03-permission) — Guardrails: three-tier check, review before execution
-* [s04 Hooks](changelog.md#s04-hooks) — Lifecycle: four event points, cross-cutting logic separated from the loop
-* [s05 Todo](changelog.md#s05-todo) — Planning: plan first then execute, trackable state
-* [s06 Subagent](changelog.md#s06-subagent) — Delegation: delegate to sub-agents with clean context isolation
-* [s07 Skill Loading](changelog.md#s07-skill-loading) — Lazy Skill Loading: index in prompt, body loaded on demand
-* [s08 Context Compact](changelog.md#s08-context-compact) — Context Compression: four-layer compaction pipeline when full
-* [s09 Memory](changelog.md#s09-memory) — Long-term Memory: what to remember, what to forget, when to consolidate
-* [s10 Task System](changelog.md#s10-task-system) — Task Orchestration: task graph + state machine + dependency checks
-* [s11 Background Tasks](changelog.md#s11-background-tasks) — Async: slow ops go background, Agent keeps thinking
-* [s12 Cron Scheduler](changelog.md#s12-cron-scheduler) — Scheduled Trigger: cron expressions, unattended execution
-* [s13 Agent Teams](changelog.md#s13-agent-teams) — Multi-Agent: lead assigns work, teammates execute in parallel
-* [s14 Team Protocols](changelog.md#s14-team-protocols) — Structured Communication: request_id + state machine between teammates
-* [s15 Autonomous Agents](changelog.md#s15-autonomous-agents) — Self-Organization: teammates scan board, claim unassigned work
-* [s16 MCP Plugin](changelog.md#s16-mcp-plugin) — MCP: dynamic tool pools, plug in when capabilities fall short
+* [s01 Agent Loop](changelog_en.md#s01-agent-loop) — ReAct: Think-Act-Observe, LLM ⇄ Tool loop
+* [s02 Tool Dispatch](changelog_en.md#s02-tool-dispatch) — Tool Use: register-and-use, no loop changes needed
+* [s03 Permission](changelog_en.md#s03-permission) — Guardrails: three-tier check, review before execution
+* [s04 Hooks](changelog_en.md#s04-hooks) — Lifecycle: four event points, cross-cutting logic separated from the loop
+* [s05 Todo](changelog_en.md#s05-todo) — Planning: plan first then execute, trackable state
+* [s06 Subagent](changelog_en.md#s06-subagent) — Delegation: delegate to sub-agents with clean context isolation
+* [s07 Skill Loading](changelog_en.md#s07-skill-loading) — Lazy Skill Loading: index in prompt, body loaded on demand
+* [s08 Context Compact](changelog_en.md#s08-context-compact) — Context Compression: four-layer compaction pipeline when full
+* [s09 Memory](changelog_en.md#s09-memory) — Long-term Memory: what to remember, what to forget, when to consolidate
+* [s10 Task System](changelog_en.md#s10-task-system) — Task Orchestration: task graph + state machine + dependency checks
+* [s11 Background Tasks](changelog_en.md#s11-background-tasks) — Async: slow ops go background, Agent keeps thinking
+* [s12 Cron Scheduler](changelog_en.md#s12-cron-scheduler) — Scheduled Trigger: cron expressions, unattended execution
+* [s13 Agent Teams](changelog_en.md#s13-agent-teams) — Multi-Agent: lead assigns work, teammates execute in parallel
+* [s14 Team Protocols](changelog_en.md#s14-team-protocols) — Structured Communication: request_id + state machine between teammates
+* [s15 Autonomous Agents](changelog_en.md#s15-autonomous-agents) — Self-Organization: teammates scan board, claim unassigned work
+* [s16 MCP Plugin](changelog_en.md#s16-mcp-plugin) — MCP: dynamic tool pools, plug in when capabilities fall short
 
 ## Usage
 
@@ -78,7 +78,7 @@ Or use the provided script:
 
 ### 4. Read the source notes
 
-Read [changelog.md](changelog.md) or [changelog_en.md](changelog_en.md)
+Read [changelog_en.md](changelog_en.md)
 
 ## Questions
 
