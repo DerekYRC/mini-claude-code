@@ -5,7 +5,7 @@
 [![Maven](https://img.shields.io/badge/build-Maven-C71A36.svg)](https://maven.apache.org/)
 
 
-**English | [简体中文](./README.md)**
+**[English](./README_en.md) | 简体中文**
 
 **姊妹版：**
 - [**mini-spring**](https://github.com/DerekYRC/mini-spring) **(简化版的spring框架)**
