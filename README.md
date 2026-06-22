@@ -5,6 +5,8 @@
 [![Maven](https://img.shields.io/badge/build-Maven-C71A36.svg)](https://maven.apache.org/)
 
 
+**English | [简体中文](./README.md)**
+
 **姊妹版：**
 - [**mini-spring**](https://github.com/DerekYRC/mini-spring) **(简化版的spring框架)**
 - [**mini-spring-cloud**](https://github.com/DerekYRC/mini-spring-cloud) **(简化版的spring cloud框架)**
@@ -69,7 +71,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.miniclaudecode.demo.S01AgentLoopDe
 
 ### 4. 阅读源码说明
 
-阅读 [changelog.md](changelog.md)
+阅读 [changelog.md](changelog.md) 或 [changelog_en.md](changelog_en.md)
 
 
 ## 提问
