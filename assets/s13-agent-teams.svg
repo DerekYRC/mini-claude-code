@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600">
+  <defs>
+    <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+    </marker>
+    <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowE" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+    </marker>
+    <marker id="arrowF" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+    </marker>
+    <marker id="arrowH" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+    <filter id="shadowSoft" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowGlass" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#020617" flood-opacity="0.28"/>
+    </filter>
+    <style>
+    text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', sans-serif; }
+    .title { font-size: 30px; font-weight: 700; fill: #111827; }
+    .subtitle { font-size: 14px; font-weight: 500; fill: #6b7280; }
+    .section { font-size: 13px; font-weight: 700; fill: #2563eb; letter-spacing: 1.4px; }
+    .section-sub { font-size: 12px; font-weight: 500; fill: #94a3b8; }
+    .node-title { font-size: 18px; font-weight: 700; fill: #111827; }
+    .node-sub { font-size: 12px; font-weight: 500; fill: #6b7280; }
+    .node-type { font-size: 12px; font-weight: 700; fill: #9ca3af; letter-spacing: 0.08em; }
+    .arrow-label { font-size: 12px; font-weight: 600; fill: #6b7280; }
+    .legend { font-size: 12px; font-weight: 500; fill: #6b7280; }
+    .footnote { font-size: 12px; font-weight: 500; fill: #94a3b8; }
+    </style>
+  </defs>
+  <rect width="960.0" height="600.0" fill="#ffffff"/>
+  <text x="480.0" y="56" text-anchor="middle" class="title">s13 Agent Teams — Lead + Teammates</text>
+  <path d="M 630.0,60.0 L 510.0,60.0 L 510.0,156.0 L 390.0,156.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <path d="M 570.0,156.0 L 325.0,156.0 L 325.0,282.0 L 80.0,282.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <path d="M 570.0,156.0 L 465.0,156.0 L 465.0,282.0 L 360.0,282.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <path d="M 570.0,156.0 L 624.0,156.0 L 624.0,282.0 L 640.0,282.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <path d="M 320.0,282.0 L 305.0,282.0 L 305.0,430.0 L 290.0,430.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
+  <path d="M 600.0,282.0 L 445.0,282.0 L 445.0,430.0 L 290.0,430.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
+  <path d="M 880.0,282.0 L 678.0,282.0 L 678.0,430.0 L 290.0,430.0" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
+  <path d="M 670.0,430.0 L 690.4,430.0 L 309.6,60.0 L 330.0,60.0" fill="none" stroke="#f97316" stroke-width="2.4" marker-end="url(#arrowE)"/>
+  <rect x="330.0" y="24.0" width="300.0" height="72.0" rx="10.0" fill="#eff6ff" stroke="#2563eb" stroke-width="2.0" filter="url(#shadowSoft)"/>
+  <text x="480.0" y="42.0" text-anchor="middle" class="node-type">LEAD</text>
+  <text x="480.0" y="66.0" text-anchor="middle" class="node-title">Lead Agent
+tools: bash,read,write,
+spawn_teammate,send,
+check_inbox</text>
+  <rect x="390.0" y="132.0" width="180.0" height="48.0" rx="10.0" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2.0" filter="url(#shadowSoft)"/>
+  <text x="480.0" y="150.0" text-anchor="middle" class="node-type">SPAWN</text>
+  <text x="480.0" y="162.0" text-anchor="middle" class="node-title">SpawnTeammateTool
+activeTeammates
+防同名重复</text>
+  <rect x="80.0" y="250.0" width="240.0" height="64.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.0" filter="url(#shadowSoft)"/>
+  <text x="200.0" y="268.0" text-anchor="middle" class="node-type">TEAMMATE</text>
+  <text x="200.0" y="288.0" text-anchor="middle" class="node-title">Alice (backend)
+bash/read/write/send
+maxTurns=10, daemon</text>
+  <rect x="360.0" y="250.0" width="240.0" height="64.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.0" filter="url(#shadowSoft)"/>
+  <text x="480.0" y="268.0" text-anchor="middle" class="node-type">TEAMMATE</text>
+  <text x="480.0" y="288.0" text-anchor="middle" class="node-title">Bob (tester)
+bash/read/write/send
+maxTurns=10, daemon</text>
+  <rect x="640.0" y="250.0" width="240.0" height="64.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.0" filter="url(#shadowSoft)"/>
+  <text x="760.0" y="268.0" text-anchor="middle" class="node-type">TEAMMATE</text>
+  <text x="760.0" y="288.0" text-anchor="middle" class="node-title">Charlie (frontend)
+bash/read/write/send
+maxTurns=10, daemon</text>
+  <rect x="290.0" y="390.0" width="380.0" height="80.0" rx="10.0" fill="#fff7ed" stroke="#f97316" stroke-width="2.0" filter="url(#shadowSoft)"/>
+  <text x="480.0" y="408.0" text-anchor="middle" class="node-type">COMMS</text>
+  <text x="480.0" y="436.0" text-anchor="middle" class="node-title">MessageBus
+.mailboxes/{name}.jsonl
+send(): append JSONL line
+readInbox(): read + delete</text>
+  <rect x="451.0" y="46.0" width="238" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="570.0" y="60.0" text-anchor="middle" class="arrow-label">spawn_teammate(name,role,prompt)</text>
+  <rect x="254.5" y="205.0" width="105" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="307.0" y="219.0" text-anchor="middle" class="arrow-label">daemon thread</text>
+  <rect x="394.5" y="205.0" width="105" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="447.0" y="219.0" text-anchor="middle" class="arrow-label">daemon thread</text>
+  <rect x="553.5" y="205.0" width="105" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="606.0" y="219.0" text-anchor="middle" class="arrow-label">daemon thread</text>
+  <rect x="227.5" y="342.0" width="119" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="287.0" y="356.0" text-anchor="middle" class="arrow-label">send_msg → lead</text>
+  <rect x="367.5" y="342.0" width="119" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="427.0" y="356.0" text-anchor="middle" class="arrow-label">send_msg → lead</text>
+  <rect x="600.5" y="342.0" width="119" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="660.0" y="356.0" text-anchor="middle" class="arrow-label">send_msg → lead</text>
+  <rect x="402.0" y="231.0" width="196" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="500.0" y="245.0" text-anchor="middle" class="arrow-label">readInbox → &lt;inbox&gt; inject</text>
+  <line x1="42.0" y1="540.0" x2="72.0" y2="540.0" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <text x="82.0" y="544.0" class="legend">lead control</text>
+  <line x1="42.0" y1="562.0" x2="72.0" y2="562.0" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+  <text x="82.0" y="566.0" class="legend">spawn</text>
+  <line x1="42.0" y1="584.0" x2="72.0" y2="584.0" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
+  <text x="82.0" y="588.0" class="legend">teammate work</text>
+  <line x1="42.0" y1="606.0" x2="72.0" y2="606.0" stroke="#f97316" stroke-width="2.4" marker-end="url(#arrowE)"/>
+  <text x="82.0" y="610.0" class="legend">message bus</text>
+</svg>
