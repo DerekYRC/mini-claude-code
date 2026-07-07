@@ -91,7 +91,3 @@ Pull Requests are welcome.
 ## Reference
 
 - [learn-claude-code](https://github.com/shareAI-lab/learn-claude-code) (highly recommended)
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=DerekYRC/mini-claude-code&type=Date)](https://star-history.com/#DerekYRC/mini-claude-code&Date)
