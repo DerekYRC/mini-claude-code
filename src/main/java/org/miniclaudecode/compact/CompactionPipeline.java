@@ -99,6 +99,10 @@ public class CompactionPipeline {
 				break;
 			}
 			String original = result.getContent() == null ? "" : result.getContent();
+			if (original.length() <= ToolResultStore.PREVIEW_CHARS) {
+				// persist 之后只剩预览 + 文件路径，块本身不够长时是净增，落盘只会把预算撑得更大。
+				continue;
+			}
 			String persisted = toolResultStore.persist(result);
 			result.setContent(persisted);
 			total -= original.length();
