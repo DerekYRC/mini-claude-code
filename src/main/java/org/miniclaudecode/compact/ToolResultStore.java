@@ -14,7 +14,8 @@ import java.nio.file.Files;
  */
 public class ToolResultStore {
 
-	private static final int PREVIEW_CHARS = 2000;
+	/** 预览上限：内容不超过它时，persist 的结果比原文还长，没有落盘价值。 */
+	static final int PREVIEW_CHARS = 2000;
 
 	private final File outputDir;
 
