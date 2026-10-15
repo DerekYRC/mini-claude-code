@@ -8,6 +8,7 @@ import org.miniclaudecode.tool.ToolResult;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * s08 专用 Agent 循环。
@@ -54,6 +55,14 @@ public class CompactingAgentLoop {
 	}
 
 	public AssistantMessage run(List<Message> messages) {
+		return run(messages, null);
+	}
+
+	/**
+	 * @param turnSink 非 null 时，本轮新加入 messages 的每条消息都会立刻回调一次。
+	 *                 调用方应在回调里做深拷贝：这些内容随后可能被压缩改写。
+	 */
+	public AssistantMessage run(List<Message> messages, Consumer<Message> turnSink) {
 		int reactiveRetries = 0;
 		for (int turn = 0; turn < maxTurns; turn++) {
 			// LLM 前先运行便宜压缩，只有最后一层才会额外调用模型生成摘要。
@@ -73,19 +82,27 @@ public class CompactingAgentLoop {
 
 			listener.onAssistantMessage(response);
 			if (hasCompactToolUse(response)) {
-				handleCompactToolUses(messages, response);
+				handleCompactToolUses(messages, response, turnSink);
 				continue;
 			}
 
-			messages.add(Message.assistant(response.getContent()));
+			addAndReport(messages, Message.assistant(response.getContent()), turnSink);
 			List<ToolResultBlock> toolResults = executeToolUses(response);
 			if (!"tool_use".equals(response.getStopReason()) || toolResults.isEmpty()) {
 				listener.onStop(response);
 				return response;
 			}
-			messages.add(Message.toolResults(toolResults));
+			addAndReport(messages, Message.toolResults(toolResults), turnSink);
 		}
 		throw new IllegalStateException("Compacting agent loop reached max turns: " + maxTurns);
+	}
+
+	/** 加入本轮历史，同时把「刚产出、还没被压缩」的原始消息报给调用方。 */
+	private void addAndReport(List<Message> messages, Message message, Consumer<Message> turnSink) {
+		messages.add(message);
+		if (turnSink != null) {
+			turnSink.accept(message);
+		}
 	}
 
 	private boolean hasCompactToolUse(AssistantMessage response) {
@@ -97,7 +114,8 @@ public class CompactingAgentLoop {
 		return false;
 	}
 
-	private void handleCompactToolUses(List<Message> messages, AssistantMessage response) {
+	private void handleCompactToolUses(List<Message> messages, AssistantMessage response,
+			Consumer<Message> turnSink) {
 		String focus = "manual compact";
 		for (ContentBlock block : response.getContent()) {
 			if (block instanceof ToolUseBlock && "compact".equals(((ToolUseBlock) block).getName())) {
@@ -109,7 +127,7 @@ public class CompactingAgentLoop {
 			}
 		}
 		replaceAll(messages, pipeline.compactHistory(messages, focus));
-		messages.add(Message.assistant(response.getContent()));
+		addAndReport(messages, Message.assistant(response.getContent()), turnSink);
 
 		List<ToolResultBlock> results = new ArrayList<>();
 		for (ContentBlock block : response.getContent()) {
@@ -127,7 +145,7 @@ public class CompactingAgentLoop {
 				results.add(new ToolResultBlock(toolUse.getId(), result.getContent()));
 			}
 		}
-		messages.add(Message.toolResults(results));
+		addAndReport(messages, Message.toolResults(results), turnSink);
 	}
 
 	private List<ToolResultBlock> executeToolUses(AssistantMessage response) {
