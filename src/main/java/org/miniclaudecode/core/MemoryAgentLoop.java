@@ -23,22 +23,29 @@ public class MemoryAgentLoop {
 	}
 
 	public AssistantMessage run(List<Message> messages, List<Message> preCompactSnapshot) {
-		AssistantMessage answer = compactingLoop.run(messages);
+		// 当轮的 assistant / tool_result 也要进快照：它们是记忆提取的重要来源，而且在下一轮之前
+		// 就可能被 microCompact 打桩，所以只能在消息刚产出时深拷贝，不能等本轮结束再从 messages 取。
+		List<Message> snapshot = new ArrayList<>(preCompactSnapshot);
+		AssistantMessage answer = compactingLoop.run(messages, message -> snapshot.add(snapshot(message)));
 		// 提取记忆要使用压缩前的上下文，避免摘要把用户偏好、反馈等细节抹掉。
-		memoryManager.afterTurn(preCompactSnapshot);
+		memoryManager.afterTurn(snapshot);
 		return answer;
 	}
 
 	public List<Message> snapshot(List<Message> messages) {
 		List<Message> copied = new ArrayList<>();
 		for (Message message : messages) {
-			List<ContentBlock> blocks = new ArrayList<>();
-			for (ContentBlock block : message.getContent()) {
-				blocks.add(copyBlock(block));
-			}
-			copied.add(new Message(message.getRole(), blocks));
+			copied.add(snapshot(message));
 		}
 		return copied;
+	}
+
+	private Message snapshot(Message message) {
+		List<ContentBlock> blocks = new ArrayList<>();
+		for (ContentBlock block : message.getContent()) {
+			blocks.add(copyBlock(block));
+		}
+		return new Message(message.getRole(), blocks);
 	}
 
 	private ContentBlock copyBlock(ContentBlock block) {

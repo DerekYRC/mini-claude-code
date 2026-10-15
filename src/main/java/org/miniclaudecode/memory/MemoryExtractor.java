@@ -100,7 +100,8 @@ public class MemoryExtractor {
 	private String currentUserText(List<Message> messages) {
 		for (int i = messages.size() - 1; i >= 0; i--) {
 			Message message = messages.get(i);
-			if (!"user".equals(message.getRole())) {
+			// tool_result 也是 user 角色，快照带上当轮工具结果后必须跳过，否则会把它当成用户输入。
+			if (!"user".equals(message.getRole()) || inspector.isToolResultMessage(message)) {
 				continue;
 			}
 			String text = inspector.textOf(message);
